@@ -6,6 +6,7 @@ from optparse import OptionGroup
 from optparse import OptionParser
 
 import dendropy
+from dendropy import treemanip
 from dendropy.utility import probability
 
 class Region(object):
@@ -90,6 +91,7 @@ class Archipelago(object):
                     region_lineage_map[region] = [leaf]
                 else:
                     region_lineage_map[region].append(leaf)
+        return region_lineage_map
 
     def bootstrap(self, initial_region=None):
         if initial_region is None:
@@ -118,7 +120,26 @@ class Archipelago(object):
                     leaf.regions.add(region)
 
     def local_diversification(self):
-        pass
+        region_lineage_map = self.region_lineages()
+        for region in region_lineage_map:
+            for lineage in region_lineage_map[region]:
+                u = self.rng.uniform(0, 1)
+                if u < self.birth_rate:
+                    child1 = lineage.new_child(edge_length=0)
+                    child2 = lineage.new_child(edge_length=0)
+                    if self.range_inheritance == Archipelago.SYMPATRIC_RANGE_INHERITANCE:
+                        child1.regions = set(lineage.regions)
+                        child2.regions = set(lineage.regions)
+                    elif self.range_inheritance == Archipelago.VICARIANT_RANGE_INHERITANCE:
+                        child1.regions = set([self.rng.choice(list(lineage.regions))])
+                        child2.regions = set([r for r in lineage.regions if r not in child1.regions])
+                    elif self.range_inheritance == Archipelago.PARTITION_RANGE_INHERITANCE:
+                        child1.regions = set([self.rng.sample(list(lineage.regions), len(lineage.regions))])
+                        child2.regions = set([r for r in lineage.regions if r not in child1.regions])
+                    else:
+                        raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
+                elif u > self.birth_rate and u < (self.birth_rate + self.death_rate):
+                    treemanip.prune_subtree(self.tree, lineage)
 
     def global_diversification(self):
         raise NotImplementedError()
