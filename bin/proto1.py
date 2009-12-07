@@ -122,11 +122,11 @@ class World(object):
     def split_lineage_in_region(self, lineage, region):
         assert lineage in self.lineages
         sys.stderr.write("Splitting ...\n")
-        self.lineages.remove(lineage)
         child1, child2 = lineage.split()
         occurring_regions = [r for r in self.regions if lineage in r.lineages]
         if len(occurring_regions) == 1:
             return
+        self.lineages.remove(lineage)
         self.lineages.append(child1)
         self.lineages.append(child2)
         for r in occurring_regions:
@@ -149,6 +149,7 @@ class World(object):
     def migrate(self):
         for r in self.regions:
             for lineage in r.lineages:
+                assert lineage in self.lineages
                 dest_region = r.get_migration_destination()
                 if dest_region is not r \
                         and lineage not in dest_region.lineages\
@@ -218,7 +219,7 @@ def run1(**kwargs):
     output = open(kwargs.get("output_path", "archipelago_results") + ".txt", "w")
     World.write_report_region_diversity_header(output)
     nreps = kwargs.get('nreps', 100)
-    ngens_per_rep = kwargs.get('ngens_per_rep', 10)
+    ngens_per_rep = kwargs.get('ngens_per_rep', 100)
     rep = 0
     while rep < nreps:
         world = create_world("R%03d" % (rep+1), div_model, kwargs.get("migration_rate", 0.1))
