@@ -121,7 +121,7 @@ class World(object):
 
     def split_lineage_in_region(self, lineage, region):
         assert lineage in self.lineages
-        sys.stderr.write("Splitting ...\n")
+#        sys.stderr.write("Splitting ...\n")
         child1, child2 = lineage.split()
         occurring_regions = [r for r in self.regions if lineage in r.lineages]
         if len(occurring_regions) == 1:
@@ -138,7 +138,7 @@ class World(object):
 
     def remove_lineage_from_region(self, lineage, region):
         assert lineage in self.lineages
-        sys.stderr.write("Removing ...\n")
+#        sys.stderr.write("Removing ...\n")
         if region is not None and lineage in region.lineages:
             region.lineages.remove(lineage)
             for r in self.regions:
@@ -181,7 +181,7 @@ class World(object):
             sys.stderr.write("Terminating on keyboard interrupt.\n")
 
     def write_report_region_diversity_header(output=sys.stdout):
-        output.write("Region\tLineages\tEndemic\tTotal\n")
+        output.write("Region\tLineages\tEndemics\tTotal\n")
     write_report_region_diversity_header = staticmethod(write_report_region_diversity_header)
 
     def report_region_diversity(self, output=sys.stdout):
@@ -197,6 +197,7 @@ class World(object):
                 if lineage not in other_region_lineages:
                     num_endemics += 1
             output.write("%s\t%d\t%d\t%d\n" % (r.label, num_lineages, num_endemics, len(self.lineages)))
+            output.flush()
 #            print r.label, r.lineages
 
 def create_world(title, div_model, migration_rate):
@@ -213,13 +214,13 @@ def create_world(title, div_model, migration_rate):
 def run1(**kwargs):
     rng = kwargs.get("rng", random.Random())
     div_model = LocalBirthDeathDiversificationModel(
-            birth_rate=kwargs.get("birth_rate", 0.1),
+            birth_rate=kwargs.get("birth_rate", 0.2),
             death_rate=kwargs.get("death_rate", 0.1),
             rng=rng)
     output = open(kwargs.get("output_path", "archipelago_results") + ".txt", "w")
     World.write_report_region_diversity_header(output)
     nreps = kwargs.get('nreps', 100)
-    ngens_per_rep = kwargs.get('ngens_per_rep', 100)
+    ngens_per_rep = kwargs.get('ngens_per_rep', 1000)
     rep = 0
     while rep < nreps:
         world = create_world("R%03d" % (rep+1), div_model, kwargs.get("migration_rate", 0.1))
