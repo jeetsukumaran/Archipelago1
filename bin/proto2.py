@@ -9,6 +9,10 @@ import dendropy
 from dendropy import treemanip
 from dendropy.utility import probability
 
+class TotalExtinctionException(Exception):
+    def __init__(self, *args, **kwargs):
+        Exception.__init__(self, *args, **kwargs)
+
 class Region(object):
     """
     An atomic biogeographical unit.
@@ -139,7 +143,12 @@ class Archipelago(object):
                     else:
                         raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
                 elif u > self.birth_rate and u < (self.birth_rate + self.death_rate):
-                    treemanip.prune_subtree(self.tree, lineage)
+                    lineage.regions.discard(region)
+                    if not lineage.regions:
+                        if lineage is self.tree.seed_node:
+                            raise TotalExtinctionException()
+                        else:
+                            treemanip.prune_subtree(self.tree, lineage)
 
     def global_diversification(self):
         raise NotImplementedError()
@@ -154,14 +163,13 @@ class Archipelago(object):
                 self.migrate()
                 self.diversify()
                 leaf_nodes = self.tree.leaf_nodes()
-                if len(leaf_nodes) == 0:
-                    self.run_log.write("All lineages extinct: terminating\n")
-                    break
                 for nd in leaf_nodes:
                     nd.edge.length += 1
                 ngen += 1
         except KeyboardInterrupt:
-            sys.stderr.write("Terminating on keyboard interrupt.\n")
+            self.run_log.write("Keyboard interrupt: terminating\n")
+        except TotalExtinctionException:
+            self.run_log.write("All lineages extinct: terminating\n")
 
 def main():
     """
@@ -221,6 +229,7 @@ def main():
             max_lineages=30,
             rng=rng)
     arch.run()
+    print arch.tree.as_string('newick')
 
 if __name__ == '__main__':
     main()
