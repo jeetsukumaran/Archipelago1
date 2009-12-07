@@ -170,6 +170,7 @@ class Archipelago(object):
             self.run_log.write("Keyboard interrupt: terminating\n")
         except TotalExtinctionException:
             self.run_log.write("All lineages extinct: terminating\n")
+        self.run_log.write("Completed run after %d generations, with %d lineages in system.\n" % (ngen, len(leaf_nodes)))
 
 def main():
     """
@@ -202,6 +203,14 @@ def main():
         metavar='RHO',
         help="probability of migration (default=%default)")
 
+    parser.add_option('-X', '--max-lineages',
+        action='store',
+        dest='max_lineages',
+        type='int',
+        default=30,
+        metavar='NUM-TAXA',
+        help="end simulation when this number of lineages are reached (default=%default)")
+
     parser.add_option('-z', '--random-seed',
         action='store',
         dest='random_seed',
@@ -226,7 +235,7 @@ def main():
             birth_rate=opts.birth_rate,
             death_rate=opts.death_rate,
             migration_rate=opts.migration_rate,
-            max_lineages=30,
+            max_lineages=opts.max_lineages,
             rng=rng)
     arch.run()
     print arch.tree.as_string('newick')
