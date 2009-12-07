@@ -4,10 +4,109 @@ import random
 import sys
 from optparse import OptionGroup
 from optparse import OptionParser
+import logging
 
 import dendropy
 from dendropy import treemanip
 from dendropy.utility import probability
+
+_LOGGING_LEVEL_ENVAR = "ARCHIPELAGO_LOGGING_LEVEL"
+_LOGGING_FORMAT_ENVAR = "ARCHIPELAGO_LOGGING_FORMAT"
+
+class RunLogger(object):
+
+    def __init__(self, **kwargs):
+        self.name = kwargs.get("name", "RunLog")
+        self._log = logging.getLogger(self.name)
+        self._log.setLevel(logging.DEBUG)
+        if kwargs.get("log_to_stderr", True):
+            ch1 = logging.StreamHandler(sys.stderr)
+            stderr_logging_level = self.get_logging_level(kwargs.get("stderr_logging_level", logging.INFO))
+            ch1.setLevel(stderr_logging_level)
+            ch1.setFormatter(self.get_default_formatter())
+            self._log.addHandler(ch1)
+
+        if kwargs.get("log_to_file", True):
+            log_stream = kwargs.get("log_stream", \
+                open(kwargs.get("log_path", self.name + ".log"), "w"))
+            ch2 = logging.StreamHandler(log_stream)
+            file_logging_level = self.get_logging_level(kwargs.get("file_logging_level", logging.DEBUG))
+            ch2.setLevel(file_logging_level)
+            ch2.setFormatter(self.get_default_formatter())
+            self._log.addHandler(ch2)
+
+    def get_logging_level(self, level=None):
+        if level in [logging.NOTSET, logging.DEBUG, logging.INFO, logging.WARNING,
+            logging.ERROR, logging.CRITICAL]:
+            return level
+        elif level is not None:
+            level_name = str(level).upper()
+        elif _LOGGING_LEVEL_ENVAR in os.environ:
+            level_name = os.environ[_LOGGING_LEVEL_ENVAR].upper()
+        else:
+            level_name = "NOTSET"
+        if level_name == "NOTSET":
+            level = logging.NOTSET
+        elif level_name == "DEBUG":
+            level = logging.DEBUG
+        elif level_name == "INFO":
+            level = logging.INFO
+        elif level_name == "WARNING":
+            level = logging.WARNING
+        elif level_name == "ERROR":
+            level = logging.ERROR
+        elif level_name == "CRITICAL":
+            level = logging.CRITICAL
+        else:
+            level = logging.NOTSET
+        return level
+
+    def get_default_formatter(self):
+        f = logging.Formatter("[%(asctime)s] %(levelname) 8s: %(message)s")
+        f.datefmt='%Y-%m-%d %H:%M:%S'
+        return f
+
+    def get_rich_formatter(self):
+        f = logging.Formatter("[%(asctime)s] %(filename)s (%(lineno)d): %(levelname) 8s: %(message)s")
+        f.datefmt='%Y-%m-%d %H:%M:%S'
+        return f
+
+    def get_simple_formatter(self):
+        return logging.Formatter("%(levelname) 8s: %(message)s")
+
+    def get_raw_formatter(self):
+        return logging.Formatter("%(message)s")
+
+    def get_logging_formatter(self, format=None):
+        if format is not None:
+            format = format.upper()
+        elif _LOGGING_FORMAT_ENVAR in os.environ:
+            format = os.environ[_LOGGING_FORMAT_ENVAR].upper()
+        if format == "RICH":
+            logging_formatter = self.get_rich_formatter()
+        elif format == "SIMPLE":
+            logging_formatter = self.get_simple_formatter()
+        elif format == "NONE":
+            logging_formatter = self.get_raw_formatter()
+        else:
+            logging_formatter = self.get_default_formatter()
+        if logging_formatter is not None:
+            logging_formatter.datefmt='%H:%M:%S'
+
+    def debug(self, msg, *args, **kwargs):
+        self._log.debug(msg, *args, **kwargs)
+
+    def info(self, msg, *args, **kwargs):
+        self._log.info(msg, *args, **kwargs)
+
+    def warning(self, msg, *args, **kwargs):
+        self._log.warning(msg, *args, **kwargs)
+
+    def error(self, msg, *args, **kwargs):
+        self._log.error(msg, *args, **kwargs)
+
+    def critical(self, msg, *args, **kwargs):
+        self._log.critical(msg, *args, **kwargs)
 
 class TotalExtinctionException(Exception):
     def __init__(self, *args, **kwargs):
@@ -51,7 +150,7 @@ class Archipelago(object):
     GLOBAL_DIVERSIFICATION = 1
 
     def __init__(self, *args, **kwargs):
-        self.title = kwargs.get("title", "Archipelago Run")
+        self.run_title = kwargs.get("title", "ArchipelagoRun")
         self.rng = kwargs.get("rng", random.Random())
         self.birth_rate = kwargs.get("birth_rate", 0.2)
         self.death_rate = kwargs.get("death_rate", 0.0)
@@ -63,11 +162,16 @@ class Archipelago(object):
         self.max_gens = kwargs.get("max_gens", 10000)
         self.max_lineages = kwargs.get("max_lineages", 30)
         self.output_prefix = kwargs.get("output_prefix", "archipelago_run")
+        self.incidence_log = kwargs.get("incidence_log", \
+                open(self.output_prefix + "." + self.run_title + ".incidences.txt", "w"))
+        self.diversity_stacked_log = kwargs.get("diversity_stacked_log", open(self.output_prefix + ".summary.stacked.txt", "w"))
+        self.diversity_unstacked_log = kwargs.get("diversity_unstacked_log", open(self.output_prefix + ".summary.unstacked.txt", "w"))
+        self.tree_log = kwargs.get("tree_log", open(self.output_prefix + ".summary.trees", "w"))
+        self.logger = kwargs.get("run_logger", RunLogger(log_path=self.output_prefix + "." + self.run_title + ".log"))
         self.regions = []
         self.create_regions()
         self.tree = None
         self.bootstrapped = False
-        self.run_log = sys.stderr
         self.diversify = None
 
     def create_regions(self):
@@ -167,10 +271,13 @@ class Archipelago(object):
                     nd.edge.length += 1
                 ngen += 1
         except KeyboardInterrupt:
-            self.run_log.write("Keyboard interrupt: terminating\n")
+            self.logger.warning("Keyboard interrupt: terminating")
+            return False
         except TotalExtinctionException:
-            self.run_log.write("All lineages extinct: terminating\n")
-        self.run_log.write("Completed run after %d generations, with %d lineages in system.\n" % (ngen, len(leaf_nodes)))
+            self.logger.warning("All lineages extinct: terminating")
+            return False
+        self.logger.info("Completed run after %d generations, with %d lineages in system" % (ngen, len(leaf_nodes)))
+        return True
 
 def main():
     """
@@ -209,15 +316,23 @@ def main():
         type='int',
         default=30,
         metavar='NUM-TAXA',
-        help="end simulation when this number of lineages are reached (default=%default)")
+        help="end each simulation replicate when this number of lineages are reached (default=%default)")
+
+    parser.add_option('-n', '--num-reps',
+        action='store',
+        dest='num_reps',
+        type='int',
+        default=30,
+        metavar='NUM-REPS',
+        help="number of simulation replicates (default=%default)")
 
     parser.add_option('-z', '--random-seed',
         action='store',
         dest='random_seed',
         type='int',
-        default=42,
+        default=None,
         metavar='SEED',
-        help="random number seed (default=%default)")
+        help="random number seed (default=NONE)")
 
     parser.add_option('-o', '--output-prefix',
         action='store',
@@ -229,16 +344,26 @@ def main():
 
     (opts, args) = parser.parse_args()
 
+    logger = RunLogger(log_path=opts.output_prefix + ".log")
     rng = random.Random(opts.random_seed)
-
-    arch = Archipelago(
-            birth_rate=opts.birth_rate,
-            death_rate=opts.death_rate,
-            migration_rate=opts.migration_rate,
-            max_lineages=opts.max_lineages,
-            rng=rng)
-    arch.run()
-    print arch.tree.as_string('newick')
+    rep = 0
+    while rep < opts.num_reps:
+        arch = Archipelago(
+                birth_rate=opts.birth_rate,
+                death_rate=opts.death_rate,
+                migration_rate=opts.migration_rate,
+                max_lineages=opts.max_lineages,
+                run_title="R%03d" % (rep+1),
+                diversity_stacked_log=open(opts.output_prefix + ".summary.stacked.txt", "w"),
+                diversity_unstacked_log=open(opts.output_prefix + ".summary.unstacked.txt", "w"),
+                tree_log=open(opts.output_prefix + ".summary.trees", "w"),
+                run_logger=logger,
+                rng=rng)
+        success = arch.run()
+        if success:
+            rep += 1
+        else:
+            logger.warning("Re-running replicate %d" % (rep+1))
 
 if __name__ == '__main__':
     main()
