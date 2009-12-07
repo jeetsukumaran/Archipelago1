@@ -23,9 +23,13 @@ class Lineage(object):
         self.generations = 0
 
     def split(self):
+        self.children = []
         self.children.append(Lineage(self))
         self.children.append(Lineage(self))
         return self.children
+
+    def __repr__(self):
+        return hex(id(self))
 
 class Region(object):
     """
@@ -67,26 +71,6 @@ class DiversificationModel(object):
     def process(self, world):
         raise NotImplementedError()
 
-class GlobalBirthDeathDiversificationModel(DiversificationModel):
-
-    def __init__(self,
-            birth_rate,
-            death_rate,
-            sympatric_speciation=True,
-            rng=None):
-        DiversificationModel.__init__(self, rng=rng)
-        self.birth_rate = birth_rate
-        self.death_rate = death_rate
-        self.sympatric_speciation = sympatric_speciation
-
-    def process(self, world):
-        for lineage in world.lineages:
-            u = self.rng.uniform(0, 1)
-            if u < self.birth_rate:
-                world.split_lineage(lineage, sympatric=self.sympatric_speciation)
-            elif u > self.birth_rate and u < (self.birth_rate + self.death_rate):
-                world.kill_lineage(lineage)
-
 class LocalBirthDeathDiversificationModel(DiversificationModel):
 
     def __init__(self,
@@ -102,7 +86,7 @@ class LocalBirthDeathDiversificationModel(DiversificationModel):
             for lineage in region.lineages:
                 u = self.rng.uniform(0, 1)
                 if u < self.birth_rate:
-                    world.split_lineage(lineage, sympatric=True)
+                    world.split_lineage_in_region(lineage, region=region)
                 elif u > self.birth_rate and u < (self.birth_rate + self.death_rate):
                     world.remove_lineage_from_region(lineage, region)
 
@@ -135,39 +119,32 @@ class World(object):
         else:
             return self._lineage_regions[lineage]
 
-    def split_lineage(self, lineage, sympatric=True, region=None):
+    def split_lineage_in_region(self, lineage, region):
+        assert lineage in self.lineages
+        sys.stderr.write("Splitting ...\n")
+        self.lineages.remove(lineage)
         child1, child2 = lineage.split()
+        occurring_regions = [r for r in self.regions if lineage in r.lineages]
+        if len(occurring_regions) == 1:
+            return
         self.lineages.append(child1)
         self.lineages.append(child2)
-        if lineage in self.lineages:
-            self.lineages.remove(lineage)
-        occurring_regions = [r for r in self.regions if lineage in r.lineages]
-        if occurring_regions:
-            if region is None:
-                region = self.rng.choice(occurring_regions)
-            for r in occurring_regions:
-                r.lineages.remove(lineage)
-                if r is not region or sympatric:
-                    r.lineages.append(child1)
-                if r is region:
-                    r.lineages.append(child2)
+        for r in occurring_regions:
+            r.lineages.remove(lineage)
+            if r is not region:
+                r.lineages.append(child1)
+            else:
+                r.lineages.append(child2)
 
-    def remove_lineage_from_region(self, lineage, region=None):
-        if region is None:
-            occurring_regions = [r for r in self.region if lineage in r.lineages]
-            if occurring_regions:
-                region = self.rng.choice(occurring_regions)
+    def remove_lineage_from_region(self, lineage, region):
+        assert lineage in self.lineages
+        sys.stderr.write("Removing ...\n")
         if region is not None and lineage in region.lineages:
             region.lineages.remove(lineage)
-
-    def kill_lineage(self, lineage):
-        if len(self.lineages) == 1:
-            return
-        if lineage in self.lineages:
+            for r in self.regions:
+                if lineage in r.lineages:
+                    return
             self.lineages.remove(lineage)
-        for r in self.regions:
-            if lineage in r.lineages:
-                r.lineages.remove(lineage)
 
     def migrate(self):
         for r in self.regions:
@@ -180,13 +157,13 @@ class World(object):
 
     def start(self, seed_lineage=None, seed_region=None):
         assert self.regions
+        sys.stderr.write("Bootstrapping simulation %s...\n" % self.title)
         if seed_lineage is None:
             seed_lineage = Lineage()
         if seed_region is None:
             seed_region = self.rng.choice(self.regions)
         self.lineages.append(seed_lineage)
         seed_region.lineages.append(seed_lineage)
-        sys.stderr.write("Bootstrapping simulation ...\n")
 
     def cycle(self, ngen):
         if not self.started:
@@ -196,29 +173,30 @@ class World(object):
                 sys.stderr.write("Run %s, Generation %d/%d ...\n" % (self.title, i+1, ngen))
                 self.migrate()
                 self.div_model.process(self)
+                if len(self.lineages) == 0:
+                    sys.stderr.write("All lineages extinct: terminating\n")
+                    break
         except KeyboardInterrupt:
             sys.stderr.write("Terminating on keyboard interrupt.\n")
 
     def write_report_region_diversity_header(output=sys.stdout):
-        output.write("Region\tLineages\tEndemic\n")
+        output.write("Region\tLineages\tEndemic\tTotal\n")
     write_report_region_diversity_header = staticmethod(write_report_region_diversity_header)
 
     def report_region_diversity(self, output=sys.stdout):
+#        print self.lineages
         for r in self.regions:
             num_lineages = len(r.lineages)
             num_endemics = 0
-            if num_lineages > 0:
-                for k in self.regions:
-                    if k is r:
-                        continue
-                    endemic = True
-                    for lineage in r.lineages:
-                        if lineage in k.lineages:
-                            endemic = False
-                            break
-                    if endemic:
-                        num_endemics += 1
-            output.write("%s\t%d\t%d\n" % (r.label, num_lineages, num_endemics))
+            other_region_lineages = []
+            for o in self.regions:
+                if o is not r:
+                    other_region_lineages.extend(o.lineages)
+            for lineage in r.lineages:
+                if lineage not in other_region_lineages:
+                    num_endemics += 1
+            output.write("%s\t%d\t%d\t%d\n" % (r.label, num_lineages, num_endemics, len(self.lineages)))
+#            print r.label, r.lineages
 
 def create_world(title, div_model, migration_rate):
     world = World(title, div_model)
@@ -239,12 +217,17 @@ def run1(**kwargs):
             rng=rng)
     output = open(kwargs.get("output_path", "archipelago_results") + ".txt", "w")
     World.write_report_region_diversity_header(output)
-    nreps = kwargs.get('nreps', 5)
+    nreps = kwargs.get('nreps', 100)
     ngens_per_rep = kwargs.get('ngens_per_rep', 10)
-    for rep in xrange(nreps):
+    rep = 0
+    while rep < nreps:
         world = create_world("R%03d" % (rep+1), div_model, kwargs.get("migration_rate", 0.1))
         world.cycle(ngens_per_rep)
-        world.report_region_diversity(output)
+        if len(world.lineages) > 0:
+            world.report_region_diversity(output)
+            rep += 1
+        else:
+            sys.stderr.write("[ALL LINEAGES EXTINCT: REPEATING SIMULATION]\n")
 
 def main():
     """
