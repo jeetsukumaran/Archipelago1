@@ -20,26 +20,25 @@ class RunLogger(object):
     _LOGGER_SET = False
 
     def __init__(self, **kwargs):
-        if RunLogger._LOGGER_SET:
-            return
-        self.name = kwargs.get("name", "RunLog")
-        self._log = logging.getLogger(self.name)
-        self._log.setLevel(logging.INFO)
-        if kwargs.get("log_to_stderr", True):
-            ch1 = logging.StreamHandler()
-            stderr_logging_level = self.get_logging_level(kwargs.get("stderr_logging_level", logging.INFO))
-            ch1.setLevel(stderr_logging_level)
-            ch1.setFormatter(self.get_default_formatter())
-            self._log.addHandler(ch1)
-        if kwargs.get("log_to_file", True):
-            log_stream = kwargs.get("log_stream", \
-                open(kwargs.get("log_path", self.name + ".log"), "w"))
-            ch2 = logging.StreamHandler(log_stream)
-            file_logging_level = self.get_logging_level(kwargs.get("file_logging_level", logging.DEBUG))
-            ch2.setLevel(file_logging_level)
-            ch2.setFormatter(self.get_default_formatter())
-            self._log.addHandler(ch2)
-        RunLogger._LOGGER_SET = True
+        if not RunLogger._LOGGER_SET:
+            self.name = kwargs.get("name", "RunLog")
+            self._log = logging.getLogger(self.name)
+            self._log.setLevel(logging.INFO)
+            if kwargs.get("log_to_stderr", True):
+                ch1 = logging.StreamHandler()
+                stderr_logging_level = self.get_logging_level(kwargs.get("stderr_logging_level", logging.INFO))
+                ch1.setLevel(stderr_logging_level)
+                ch1.setFormatter(self.get_default_formatter())
+                self._log.addHandler(ch1)
+            if kwargs.get("log_to_file", True):
+                log_stream = kwargs.get("log_stream", \
+                    open(kwargs.get("log_path", self.name + ".log"), "w"))
+                ch2 = logging.StreamHandler(log_stream)
+                file_logging_level = self.get_logging_level(kwargs.get("file_logging_level", logging.DEBUG))
+                ch2.setLevel(file_logging_level)
+                ch2.setFormatter(self.get_default_formatter())
+                self._log.addHandler(ch2)
+            RunLogger._LOGGER_SET = True
 
     def get_logging_level(self, level=None):
         if level in [logging.NOTSET, logging.DEBUG, logging.INFO, logging.WARNING,
@@ -240,6 +239,10 @@ class Archipelago(object):
     def num_lineages_in_region(self, region):
         return sum([1 for nd in self.tree.leaf_iter() if region in nd.regions])
 
+    def _get_num_lineages(self):
+        return len(self.tree.leaf_nodes())
+    num_lineages = property(_get_num_lineages)
+
     def region_lineages(self):
         region_lineage_map = {}
         for leaf in self.tree.leaf_iter():
@@ -416,10 +419,12 @@ def main():
                 run_logger=logger,
                 rng=rng)
         success = arch.run()
-        if success:
-            rep += 1
+        if arch.num_lineages < opts.max_lineages:
+            logger.warning("Failed to reach target diversity: re-running replicate %d ('%s')" % (rep+1, arch.run_title))
+        elif not success:
+            logger.warning("Total extinction of all lineages: re-running replicate %d ('%s')" % (rep+1, arch.run_title))
         else:
-            logger.warning("Re-running replicate %d ('%s')" % (rep+1, arch.run_title))
+            rep += 1
 
 if __name__ == '__main__':
     main()
