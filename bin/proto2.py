@@ -18,28 +18,24 @@ _LOGGING_FORMAT_ENVAR = "ARCHIPELAGO_LOGGING_FORMAT"
 
 class RunLogger(object):
 
-    _LOGGER_SET = False
-
     def __init__(self, **kwargs):
-        if not RunLogger._LOGGER_SET:
-            self.name = kwargs.get("name", "RunLog")
-            self._log = logging.getLogger(self.name)
-            self._log.setLevel(logging.DEBUG)
-            if kwargs.get("log_to_stderr", True):
-                ch1 = logging.StreamHandler()
-                stderr_logging_level = self.get_logging_level(kwargs.get("stderr_logging_level", logging.INFO))
-                ch1.setLevel(stderr_logging_level)
-                ch1.setFormatter(self.get_default_formatter())
-                self._log.addHandler(ch1)
-            if kwargs.get("log_to_file", True):
-                log_stream = kwargs.get("log_stream", \
-                    open(kwargs.get("log_path", self.name + ".log"), "w"))
-                ch2 = logging.StreamHandler(log_stream)
-                file_logging_level = self.get_logging_level(kwargs.get("file_logging_level", logging.DEBUG))
-                ch2.setLevel(file_logging_level)
-                ch2.setFormatter(self.get_default_formatter())
-                self._log.addHandler(ch2)
-            RunLogger._LOGGER_SET = True
+        self.name = kwargs.get("name", "RunLog")
+        self._log = logging.getLogger(self.name)
+        self._log.setLevel(logging.DEBUG)
+        if kwargs.get("log_to_stderr", True):
+            ch1 = logging.StreamHandler()
+            stderr_logging_level = self.get_logging_level(kwargs.get("stderr_logging_level", logging.INFO))
+            ch1.setLevel(stderr_logging_level)
+            ch1.setFormatter(self.get_default_formatter())
+            self._log.addHandler(ch1)
+        if kwargs.get("log_to_file", True):
+            log_stream = kwargs.get("log_stream", \
+                open(kwargs.get("log_path", self.name + ".log"), "w"))
+            ch2 = logging.StreamHandler(log_stream)
+            file_logging_level = self.get_logging_level(kwargs.get("file_logging_level", logging.DEBUG))
+            ch2.setLevel(file_logging_level)
+            ch2.setFormatter(self.get_default_formatter())
+            self._log.addHandler(ch2)
 
     def get_logging_level(self, level=None):
         if level in [logging.NOTSET, logging.DEBUG, logging.INFO, logging.WARNING,
@@ -240,9 +236,18 @@ class Archipelago(object):
         self.max_gens = kwargs.get("max_gens", 10000)
         self.target_diversity = kwargs.get("target_diversity", 30)
         self.output_prefix = kwargs.get("output_prefix", "archipelago_run")
-        self.diversity_log = kwargs.get("diversity_log", open(self.output_prefix + ".summary.stacked.txt", "w"))
-        self.tree_log = kwargs.get("tree_log", open(self.output_prefix + ".summary.trees", "w"))
-        self.logger = kwargs.get("run_logger", RunLogger(log_path=self.output_prefix + "." + self.run_title + ".log"))
+        if "diversity_log" in kwargs:
+            self.diversity_log = kwargs["diversity_log"]
+        else:
+            self.diversity_log = open(self.output_prefix + "." + self.run_title + ".diversity.txt", "w")
+        if "tree_log" in kwargs:
+            self.tree_log = kwargs["tree_log"]
+        else:
+            self.tree_log = open(self.output_prefix + "." + self.run_title + ".summary.trees", "w")
+        if "run_logger" in kwargs:
+            self.logger = kwargs["run_logger"]
+        else:
+            self.logger = RunLogger(log_path=self.output_prefix + "." + self.run_title + ".log")
         self.regions = Region.matrix_from_file(kwargs.get("regions_file", self.default_regions()))
         self.tree = None
         self.bootstrapped = False
@@ -481,7 +486,7 @@ class Archipelago(object):
         self.write_species_in_cols_incidence_log()
         self.write_diversity_log(column_headers)
         self.write_nexus()
-#        self.tree_log
+        self.tree_log.write(self.tree.as_string('newick'))
 
 def main():
     """
