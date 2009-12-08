@@ -17,17 +17,20 @@ _LOGGING_FORMAT_ENVAR = "ARCHIPELAGO_LOGGING_FORMAT"
 
 class RunLogger(object):
 
+    _LOGGER_SET = False
+
     def __init__(self, **kwargs):
+        if RunLogger._LOGGER_SET:
+            return
         self.name = kwargs.get("name", "RunLog")
         self._log = logging.getLogger(self.name)
-        self._log.setLevel(logging.DEBUG)
+        self._log.setLevel(logging.INFO)
         if kwargs.get("log_to_stderr", True):
-            ch1 = logging.StreamHandler(sys.stderr)
+            ch1 = logging.StreamHandler()
             stderr_logging_level = self.get_logging_level(kwargs.get("stderr_logging_level", logging.INFO))
             ch1.setLevel(stderr_logging_level)
             ch1.setFormatter(self.get_default_formatter())
             self._log.addHandler(ch1)
-
         if kwargs.get("log_to_file", True):
             log_stream = kwargs.get("log_stream", \
                 open(kwargs.get("log_path", self.name + ".log"), "w"))
@@ -36,6 +39,7 @@ class RunLogger(object):
             ch2.setLevel(file_logging_level)
             ch2.setFormatter(self.get_default_formatter())
             self._log.addHandler(ch2)
+        RunLogger._LOGGER_SET = True
 
     def get_logging_level(self, level=None):
         if level in [logging.NOTSET, logging.DEBUG, logging.INFO, logging.WARNING,
@@ -64,7 +68,7 @@ class RunLogger(object):
         return level
 
     def get_default_formatter(self):
-        f = logging.Formatter("[%(asctime)s] %(levelname) 8s: %(message)s")
+        f = logging.Formatter("[%(asctime)s] %(message)s")
         f.datefmt='%Y-%m-%d %H:%M:%S'
         return f
 
@@ -198,7 +202,7 @@ class Archipelago(object):
     GLOBAL_DIVERSIFICATION = 1
 
     def __init__(self, *args, **kwargs):
-        self.run_title = kwargs.get("title", "ArchipelagoRun")
+        self.run_title = kwargs.get("run_title", "ArchipelagoRun")
         self.rng = kwargs.get("rng", random.Random())
         self.birth_rate = kwargs.get("birth_rate", 0.2)
         self.death_rate = kwargs.get("death_rate", 0.0)
@@ -316,12 +320,12 @@ class Archipelago(object):
                     nd.edge.length += 1
                 ngen += 1
         except KeyboardInterrupt:
-            self.logger.warning("Keyboard interrupt: terminating")
+            self.logger.warning("%s: Keyboard interrupt: terminating" % self.run_title)
             return False
         except TotalExtinctionException:
-            self.logger.warning("All lineages extinct: terminating")
+            self.logger.warning("%s: All lineages extinct: terminating" % self.run_title)
             return False
-        self.logger.info("Completed run after %d generations, with %d lineages in system" % (ngen, len(leaf_nodes)))
+        self.logger.info("%s: Completed run after %d generations, with %d lineages in system" % (self.run_title, ngen, len(leaf_nodes)))
         return True
 
     def report(self, write_summary_headers=True):
@@ -374,7 +378,7 @@ def main():
         action='store',
         dest='num_reps',
         type='int',
-        default=30,
+        default=10,
         metavar='NUM-REPS',
         help="number of simulation replicates (default=%default)")
 
@@ -415,7 +419,7 @@ def main():
         if success:
             rep += 1
         else:
-            logger.warning("Re-running replicate %d" % (rep+1))
+            logger.warning("Re-running replicate %d ('%s')" % (rep+1, arch.run_title))
 
 if __name__ == '__main__':
     main()
