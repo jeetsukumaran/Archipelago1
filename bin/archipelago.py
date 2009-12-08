@@ -125,7 +125,7 @@ class Region(object):
             stream = open(f, "rU")
         else:
             stream = f
-        row_strings = [r.strip() for r in f.readlines() if r.strip()]
+        row_strings = [r.strip() for r in stream.readlines() if r.strip()]
         region_names = [r.strip() for r in re.split("[\t ]+", row_strings[0]) if r.strip()]
         rows = [[c.strip() for c in re.split("[\t ]+", r) if c.strip()] for r in row_strings[1:]]
         regions = []
@@ -591,7 +591,7 @@ def main():
     (opts, args) = parser.parse_args()
 
     if len(args) > 0:
-        regions_file = open(os.path.expandvars(os.path.expanduser(args[0])), "rU")
+        regions_file = os.path.expandvars(os.path.expanduser(args[0]))
     else:
         regions_file = None
 
