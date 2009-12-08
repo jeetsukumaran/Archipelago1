@@ -254,18 +254,23 @@ class Archipelago(object):
         self.bootstrapped = False
         self.diversify = None
 
-        self.logger.info("Initalized simulation '%s'" % self.run_title)
-        self.logger.debug("Birth Rate = %s, Death Rate = %s, Target Diversity = %s, Max Gens = %s" % (self.birth_rate, self.death_rate, self.target_diversity, self.max_gens))
-        self.logger.debug("Diversification Mode = '%s', Range Inheritance = '%s'" \
-                % (Archipelago.DIVERSIFICATION_NAMES[self.diversification_mode], \
+        self.logger.info("%s: Starting simulation '%s'" % (self.run_title, self.run_title))
+        if self.target_diversity:
+            self.logger.debug("%s: Target Diversity = %d" % (self.run_title, self.target_diversity))
+        else:
+            self.logger.debug("%s: Target Diversity = (not set)" % (self.run_title))
+        self.logger.debug("%s: Generation Limit = %d" % (self.run_title, self.max_gens))
+        self.logger.debug("%s: Birth Rate = %s, Death Rate = %s" % (self.run_title, self.birth_rate, self.death_rate))
+        self.logger.debug("%s: Diversification Mode = '%s', Range Inheritance = '%s'" \
+                % (self.run_title,
+                   Archipelago.DIVERSIFICATION_NAMES[self.diversification_mode], \
                    Archipelago.RANGE_INHERITANCE_NAMES[self.range_inheritance]))
-        self.logger.debug("Regions: %s" % (", ".join([r.label for r in self.regions])))
-        self.logger.debug("Migration Probabilities:\n%s" % Region.matrix_as_string(self.regions))
+        self.logger.debug("%s: Regions: %s" % (self.run_title, ", ".join([r.label for r in self.regions])))
+        self.logger.debug("%s: Migration Probabilities:\n%s" % (self.run_title, Region.matrix_as_string(self.regions)))
 
     def default_regions(self):
         r = """
             A           B           C           D           E
-
         A   -           %(m)s       0.0         0.0         0.0
         B   %(m)s       -           %(m)s       0.0         0.0
         C   0.0         %(m)s       -           %(m)s       0.0
@@ -294,7 +299,7 @@ class Archipelago(object):
     def bootstrap(self, initial_region=None):
         if initial_region is None:
             initial_region = self.rng.choice(self.regions)
-        self.logger.debug("Seeding lineage in Region '%s'" % initial_region.label)
+        self.logger.debug("%s: Seeding lineage in Region '%s'" % (self.run_title, initial_region.label))
         self.tree = dendropy.Tree()
         self.tree.seed_node.regions = set([initial_region])
         self.tree.seed_node.edge.length = 1
@@ -352,10 +357,11 @@ class Archipelago(object):
         if not self.bootstrapped:
             self.bootstrap()
         try:
-            self.logger.debug("%s: Starting run" % self.run_title)
+            self.logger.debug("%s: Beginning running generation cycles" % self.run_title)
             ngen = 0
             leaf_nodes = self.tree.leaf_nodes()
-            while ngen < self.max_gens and len(leaf_nodes) < self.target_diversity:
+            while (ngen < self.max_gens) and \
+                    (self.target_diversity == 0 or len(leaf_nodes) < self.target_diversity):
                 self.migrate()
                 self.diversify()
                 leaf_nodes = self.tree.leaf_nodes()
@@ -415,7 +421,7 @@ def main():
         type='int',
         default=30,
         metavar='NUM-LINEAGES',
-        help="end each simulation replicate when this number of lineages are reached, and repeat if not reached before maximum number of generations (default=%default)")
+        help="end each simulation replicate when this number of lineages are reached, and repeat if not reached before maximum number of generations; 0 = run until max generations (default=%default)")
 
     parser.add_option('-X', '--max-gens',
         action='store',
@@ -469,7 +475,7 @@ def main():
                 run_logger=logger,
                 rng=rng)
         success = arch.run()
-        if arch.num_lineages < opts.target_diversity:
+        if opts.target_diversity and arch.num_lineages < opts.target_diversity:
             logger.warning("Failed to reach target diversity: re-running replicate %d ('%s')" % (rep+1, arch.run_title))
         elif not success:
             logger.warning("Total extinction of all lineages: re-running replicate %d ('%s')" % (rep+1, arch.run_title))
