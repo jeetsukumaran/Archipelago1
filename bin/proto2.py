@@ -243,8 +243,6 @@ class Archipelago(object):
         self.max_gens = kwargs.get("max_gens", 10000)
         self.target_diversity = kwargs.get("target_diversity", 30)
         self.output_prefix = kwargs.get("output_prefix", "archipelago_run")
-        self.incidence_log = kwargs.get("incidence_log", \
-                open(self.output_prefix + "." + self.run_title + ".incidences.txt", "w"))
         self.diversity_stacked_log = kwargs.get("diversity_stacked_log", open(self.output_prefix + ".summary.stacked.txt", "w"))
         self.diversity_unstacked_log = kwargs.get("diversity_unstacked_log", open(self.output_prefix + ".summary.unstacked.txt", "w"))
         self.tree_log = kwargs.get("tree_log", open(self.output_prefix + ".summary.trees", "w"))
@@ -253,6 +251,7 @@ class Archipelago(object):
         self.tree = None
         self.bootstrapped = False
         self.diversify = None
+        self.output_column_delimiter = '\t'
 
         self.logger.info("%s: Starting simulation '%s'" % (self.run_title, self.run_title))
         if self.target_diversity:
@@ -343,7 +342,7 @@ class Archipelago(object):
                     else:
                         raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
                 elif u > self.birth_rate and u < (self.birth_rate + self.death_rate):
-                    lineage.regions.discard(region)
+                    lineage.regions.remove(region)
                     if not lineage.regions:
                         if lineage is self.tree.seed_node:
                             raise TotalExtinctionException()
@@ -374,13 +373,51 @@ class Archipelago(object):
         except TotalExtinctionException:
             self.logger.warning("%s: All lineages extinct: terminating" % self.run_title)
             return False
+        self.assign_taxa()
         self.logger.info("%s: Completed run after %d generations, with %d lineages in system" % (self.run_title, ngen, len(leaf_nodes)))
         return True
 
-    def report(self, write_summary_headers=True):
-        pass
-#        self.incidence_log
-#        self.diversity_stacked_log
+    def assign_taxa(self):
+        for i, leaf in enumerate(self.tree.leaf_iter()):
+            leaf.taxon = self.tree.taxon_set.new_taxon(label="T%03d" % (i+1))
+            leaf.taxon.regions = leaf.regions
+
+    def write_incidence_log(self):
+        ilog = open(self.output_prefix + "." + self.run_title + ".incidences.txt", "w")
+        ilog.write(self.output_column_delimiter.join(["Species"] + [r.label for r in self.regions]))
+        ilog.write("\n")
+        for t in self.tree.taxon_set:
+            ilog.write(t.label)
+            ilog.write(self.output_column_delimiter)
+            p = [("1" if r in t.regions else "0") for r in self.regions]
+            ilog.write(self.output_column_delimiter.join(p))
+            ilog.write("\n")
+
+    def write_stacked_diversity(self, column_headers=True):
+        if column_headers:
+            self.diversity_stacked_log.write(self.output_column_delimiter.join(["Region", "Lineages", "Endemics"]))
+            self.diversity_stacked_log.write("\n")
+        for region in self.regions:
+            row = []
+            row.append(region.label)
+#            num_lineages = sum([1 for t in self.tree.taxon_set if region in t.regions])
+            num_lineages = 0
+            num_endemics = 0
+            found = 0
+            for t in self.tree.taxon_set:
+                if region in t.regions:
+                    found += 1
+                    if len(t.regions) == 1:
+                        num_endemics += 1
+            num_lineages += found
+            row.append(str(num_lineages))
+            row.append(str(num_endemics))
+            self.diversity_stacked_log.write(self.output_column_delimiter.join(row))
+            self.diversity_stacked_log.write("\n")
+
+    def report(self, column_headers=True):
+        self.write_incidence_log()
+        self.write_stacked_diversity(column_headers)
 #        self.diversity_unstacked_log
 #        self.tree_log
 
@@ -411,7 +448,7 @@ def main():
         action='store',
         dest='migration_rate',
         type='float',
-        default=0.1,
+        default=0.2,
         metavar='RHO',
         help="probability of migration (default=%default)")
 
@@ -458,6 +495,10 @@ def main():
     (opts, args) = parser.parse_args()
 
     logger = RunLogger(log_path=opts.output_prefix + ".log")
+    logger.info("Running ARCHIPELAGO")
+    if opts.random_seed is None:
+        opts.random_seed = random.randint(0, sys.maxint)
+    logger.info("Random Seed = %d" % opts.random_seed)
     rng = random.Random(opts.random_seed)
     rep = 0
     while rep < opts.num_reps:
@@ -480,6 +521,7 @@ def main():
         elif not success:
             logger.warning("Total extinction of all lineages: re-running replicate %d ('%s')" % (rep+1, arch.run_title))
         else:
+            arch.report(column_headers=(rep==0))
             rep += 1
 
 if __name__ == '__main__':
