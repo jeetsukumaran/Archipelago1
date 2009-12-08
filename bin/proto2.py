@@ -237,7 +237,7 @@ class Archipelago(object):
         self.death_rate = kwargs.get("death_rate", 0.0)
         self.migration_rate = kwargs.get("migration_rate", 0.1)
         self.diversification_mode = kwargs.get("diversification_mode", \
-                Archipelago.LOCAL_DIVERSIFICATION)
+                Archipelago.GLOBAL_DIVERSIFICATION)
         self.range_inheritance = kwargs.get("range_inheritance", \
                 Archipelago.VICARIANT_RANGE_INHERITANCE)
         self.max_gens = kwargs.get("max_gens", 10000)
@@ -350,7 +350,28 @@ class Archipelago(object):
         self.clean_tree()
 
     def global_diversification(self):
-        raise NotImplementedError()
+        for lineage in self.tree.leaf_iter():
+            u = self.rng.uniform(0, 1)
+            print u, len(self.tree.leaf_nodes())
+            if u <= self.birth_rate:
+                child1 = lineage.new_child(edge_length=0)
+                child2 = lineage.new_child(edge_length=0)
+                if self.range_inheritance == Archipelago.SYMPATRIC_RANGE_INHERITANCE:
+                    child1.regions = set(lineage.regions)
+                    child2.regions = set(lineage.regions)
+                elif self.range_inheritance == Archipelago.VICARIANT_RANGE_INHERITANCE:
+                    child1.regions = set([self.rng.choice(list(lineage.regions))])
+                    child2.regions = set([r for r in lineage.regions if r not in child1.regions])
+                elif self.range_inheritance == Archipelago.PARTITION_RANGE_INHERITANCE:
+                    child1.regions = set([self.rng.sample(list(lineage.regions), len(lineage.regions))])
+                    child2.regions = set([r for r in lineage.regions if r not in child1.regions])
+                else:
+                    raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
+            elif u > self.birth_rate and u <= (self.birth_rate + self.death_rate):
+                if lineage is self.tree.seed_node:
+                    raise TotalExtinctionException()
+                else:
+                    treemanip.prune_subtree(self.tree, lineage)
 
     def run(self):
         if not self.bootstrapped:
@@ -410,7 +431,6 @@ class Archipelago(object):
         for region in self.regions:
             row = []
             row.append(region.label)
-#            num_lineages = sum([1 for t in self.tree.taxon_set if region in t.regions])
             num_lineages = 0
             num_endemics = 0
             found = 0
@@ -442,7 +462,7 @@ def main():
         action='store',
         dest='birth_rate',
         type='float',
-        default=0.1,
+        default=0.2,
         metavar='LAMBDA',
         help="probability of speciation (default=%default)")
 
@@ -458,7 +478,7 @@ def main():
         action='store',
         dest='migration_rate',
         type='float',
-        default=0.2,
+        default=0.1,
         metavar='RHO',
         help="probability of migration (default=%default)")
 
