@@ -344,22 +344,10 @@ class Archipelago(object):
                         child2.regions = set([r for r in lineage.regions if r not in child1.regions])
                     else:
                         raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
-#                    region_lineage_map = self.region_lineages()
-#                    for other_region in self.regions:
-#                        if other_region is region:
-#                            continue
-#                        if lineage in region_lineage_map[other_region]:
-#                            region_lineage_map[other_region].remove(lineage)
-#                            region_lineage_map[other_region].append(child2)
-#                    del(lineage.regions)
                 elif u > self.birth_rate and u < (self.birth_rate + self.death_rate):
                     lineage.regions.remove(region)
+                region_lineage_map = self.region_lineages()
         self.clean_tree()
-#                    if not lineage.regions:
-#                        if lineage is self.tree.seed_node:
-#                            raise TotalExtinctionException()
-#                        else:
-#                            treemanip.prune_subtree(self.tree, lineage)
 
     def global_diversification(self):
         raise NotImplementedError()
