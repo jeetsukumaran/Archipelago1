@@ -287,6 +287,8 @@ class Archipelago(object):
 
     def region_lineages(self):
         region_lineage_map = {}
+        for region in self.regions:
+            region_lineage_map[region] = []
         for leaf in self.tree.leaf_iter():
             for region in leaf.regions:
                 if region not in region_lineage_map:
@@ -324,8 +326,9 @@ class Archipelago(object):
 
     def local_diversification(self):
         region_lineage_map = self.region_lineages()
-        for region in region_lineage_map:
-            for lineage in region_lineage_map[region]:
+        for region in self.regions:
+            lineages = region_lineage_map[region]
+            for lineage in lineages:
                 u = self.rng.uniform(0, 1)
                 if u < self.birth_rate:
                     child1 = lineage.new_child(edge_length=0)
@@ -341,6 +344,14 @@ class Archipelago(object):
                         child2.regions = set([r for r in lineage.regions if r not in child1.regions])
                     else:
                         raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
+                    region_lineage_map = self.region_lineages()
+#                    for other_region in self.regions:
+#                        if other_region is region:
+#                            continue
+#                        if lineage in region_lineage_map[other_region]:
+#                            region_lineage_map[other_region].remove(lineage)
+#                            region_lineage_map[other_region].append(child2)
+                    del(lineage.regions)
                 elif u > self.birth_rate and u < (self.birth_rate + self.death_rate):
                     lineage.regions.remove(region)
                     if not lineage.regions:
@@ -363,6 +374,7 @@ class Archipelago(object):
                     (self.target_diversity == 0 or len(leaf_nodes) < self.target_diversity):
                 self.migrate()
                 self.diversify()
+                self.clean_tree()
                 leaf_nodes = self.tree.leaf_nodes()
                 for nd in leaf_nodes:
                     nd.edge.length += 1
@@ -373,11 +385,20 @@ class Archipelago(object):
         except TotalExtinctionException:
             self.logger.warning("%s: All lineages extinct: terminating" % self.run_title)
             return False
-        self.assign_taxa()
+        self.finalize_tree()
         self.logger.info("%s: Completed run after %d generations, with %d lineages in system" % (self.run_title, ngen, len(leaf_nodes)))
         return True
 
-    def assign_taxa(self):
+    def clean_tree(self):
+        for leaf in self.tree.leaf_iter():
+            if len(leaf.regions) == 0:
+                if leaf is self.tree.seed_node:
+                    raise TotalExtinctionException()
+                else:
+                    treemanip.prune_subtree(self.tree, leaf)
+
+    def finalize_tree(self):
+        self.clean_tree()
         for i, leaf in enumerate(self.tree.leaf_iter()):
             leaf.taxon = self.tree.taxon_set.new_taxon(label="T%03d" % (i+1))
             leaf.taxon.regions = leaf.regions
