@@ -3,6 +3,7 @@
 import random
 import sys
 import re
+import os
 from cStringIO import StringIO
 from optparse import OptionGroup
 from optparse import OptionParser
@@ -212,6 +213,9 @@ class Region(object):
             raise ValueError('Sum of probabilities of connections > 1')
         return probability.lengthed_choice(dests, probs)
 
+    def __str__(self):
+        return "Region '%s'" % self.label
+
 class Archipelago(object):
 
     LOCAL_DIVERSIFICATION = 0
@@ -248,7 +252,10 @@ class Archipelago(object):
             self.logger = kwargs["run_logger"]
         else:
             self.logger = RunLogger(log_path=self.output_prefix + "." + self.run_title + ".log")
-        self.regions = Region.matrix_from_file(kwargs.get("regions_file", self.default_regions()))
+        if "regions_file" in kwargs and kwargs["regions_file"] is not None:
+            self.regions = Region.matrix_from_file(kwargs["regions_file"])
+        else:
+            self.regions = Region.matrix_from_file(self.default_regions())
         self.tree = None
         self.bootstrapped = False
         self.diversify = None
@@ -340,11 +347,19 @@ class Archipelago(object):
                         child1.regions = set(lineage.regions)
                         child2.regions = set(lineage.regions)
                     elif self.range_inheritance == Archipelago.VICARIANT_RANGE_INHERITANCE:
-                        child1.regions = set([self.rng.choice(list(lineage.regions))])
-                        child2.regions = set([r for r in lineage.regions if r not in child1.regions])
+                        if len(lineage.regions) == 1:
+                            child1.regions = set(lineage.regions)
+                            child2.regions = set(lineage.regions)
+                        else:
+                            child1.regions = set([self.rng.choice(list(lineage.regions))])
+                            child2.regions = set([r for r in lineage.regions if r not in child1.regions])
                     elif self.range_inheritance == Archipelago.PARTITION_RANGE_INHERITANCE:
-                        child1.regions = set([self.rng.sample(list(lineage.regions), len(lineage.regions))])
-                        child2.regions = set([r for r in lineage.regions if r not in child1.regions])
+                        if len(lineage.regions) == 1:
+                            child1.regions = set(lineage.regions)
+                            child2.regions = set(lineage.regions)
+                        else:
+                            child1.regions = set([self.rng.sample(list(lineage.regions), len(lineage.regions))])
+                            child2.regions = set([r for r in lineage.regions if r not in child1.regions])
                     else:
                         raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
                 elif u > self.birth_rate and u < (self.birth_rate + self.death_rate):
@@ -353,7 +368,7 @@ class Archipelago(object):
         self.clean_tree()
 
     def global_diversification(self):
-        lineages = self.tree.leaf_iter()
+        lineages = self.tree.leaf_nodes()
         for lineage in lineages:
             u = self.rng.uniform(0, 1)
             if u <= self.birth_rate:
@@ -363,11 +378,19 @@ class Archipelago(object):
                     child1.regions = set(lineage.regions)
                     child2.regions = set(lineage.regions)
                 elif self.range_inheritance == Archipelago.VICARIANT_RANGE_INHERITANCE:
-                    child1.regions = set([self.rng.choice(list(lineage.regions))])
-                    child2.regions = set([r for r in lineage.regions if r not in child1.regions])
+                    if len(lineage.regions) == 1:
+                        child1.regions = set(lineage.regions)
+                        child2.regions = set(lineage.regions)
+                    else:
+                        child1.regions = set([self.rng.choice(list(lineage.regions))])
+                        child2.regions = set([r for r in lineage.regions if r not in child1.regions])
                 elif self.range_inheritance == Archipelago.PARTITION_RANGE_INHERITANCE:
-                    child1.regions = set([self.rng.sample(list(lineage.regions), len(lineage.regions))])
-                    child2.regions = set([r for r in lineage.regions if r not in child1.regions])
+                    if len(lineage.regions) == 1:
+                        child1.regions = set(lineage.regions)
+                        child2.regions = set(lineage.regions)
+                    else:
+                        child1.regions = set([self.rng.sample(list(lineage.regions), len(lineage.regions))])
+                        child2.regions = set([r for r in lineage.regions if r not in child1.regions])
                 else:
                     raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
                 del(lineage.regions)
@@ -567,6 +590,11 @@ def main():
 
     (opts, args) = parser.parse_args()
 
+    if len(args) > 0:
+        regions_file = open(os.path.expandvars(os.path.expanduser(args[0])), "rU")
+    else:
+        regions_file = None
+
     logger = RunLogger(log_path=opts.output_prefix + ".log")
     logger.info("Running ARCHIPELAGO")
     if opts.random_seed is None:
@@ -584,6 +612,7 @@ def main():
                 target_diversity=opts.target_diversity,
                 max_gens=opts.max_gens,
                 run_title="R%03d" % (rep+1),
+                regions_file=regions_file,
                 output_prefix=opts.output_prefix,
                 diversity_log=diversity_log,
                 tree_log=tree_log,
