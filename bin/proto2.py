@@ -375,6 +375,8 @@ class Archipelago(object):
                     raise TotalExtinctionException()
                 else:
                     treemanip.prune_subtree(self.tree, lineage)
+                    if len(self.tree.seed_node.child_nodes()) == 0:
+                        raise TotalExtinctionException()
 
     def run(self):
         if not self.bootstrapped:
