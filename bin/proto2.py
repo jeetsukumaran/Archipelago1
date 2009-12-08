@@ -466,6 +466,7 @@ class Archipelago(object):
         if column_headers:
             self.diversity_log.write(self.output_column_delimiter.join(["Region", "Lineages", "Endemics"]))
             self.diversity_log.write("\n")
+            self.diversity_log.flush()
         for region in self.regions:
             row = []
             row.append(region.label)
@@ -482,12 +483,13 @@ class Archipelago(object):
             row.append(str(num_endemics))
             self.diversity_log.write(self.output_column_delimiter.join(row))
             self.diversity_log.write("\n")
+        self.diversity_log.flush()
 
     def report(self, column_headers=True):
         self.write_species_in_rows_incidence_log()
         self.write_species_in_cols_incidence_log()
-        self.write_diversity_log(column_headers)
         self.write_nexus()
+        self.write_diversity_log(column_headers)
         self.tree_log.write(self.tree.as_string('newick'))
 
 def main():
@@ -568,6 +570,8 @@ def main():
     if opts.random_seed is None:
         opts.random_seed = random.randint(0, sys.maxint)
     logger.info("Random Seed = %d" % opts.random_seed)
+    diversity_log=open(opts.output_prefix + ".diversity.txt", "w")
+    tree_log=open(opts.output_prefix + ".summary.trees", "w")
     rng = random.Random(opts.random_seed)
     rep = 0
     while rep < opts.num_reps:
@@ -579,8 +583,8 @@ def main():
                 max_gens=opts.max_gens,
                 run_title="R%03d" % (rep+1),
                 output_prefix=opts.output_prefix,
-                diversity_log=open(opts.output_prefix + ".diversity.txt", "w"),
-                tree_log=open(opts.output_prefix + ".summary.trees", "w"),
+                diversity_log=diversity_log,
+                tree_log=tree_log,
                 run_logger=logger,
                 rng=rng)
         success = arch.run()
