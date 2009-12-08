@@ -161,10 +161,6 @@ class Region(object):
         for i, region1 in enumerate(regions):
             for j, region2 in enumerate(regions):
                 region1.add_connection(region2, region_connections[region1][j])
-#        for region1 in regions:
-#            print
-#            print region1.label
-#            print "%s" % ("   ".join([("%s: %s" % (r.label, region1.connections[r])) for r in regions]))
         return regions
     matrix_from_file = staticmethod(matrix_from_file)
 
@@ -243,8 +239,7 @@ class Archipelago(object):
         self.max_gens = kwargs.get("max_gens", 10000)
         self.target_diversity = kwargs.get("target_diversity", 30)
         self.output_prefix = kwargs.get("output_prefix", "archipelago_run")
-        self.diversity_stacked_log = kwargs.get("diversity_stacked_log", open(self.output_prefix + ".summary.stacked.txt", "w"))
-        self.diversity_unstacked_log = kwargs.get("diversity_unstacked_log", open(self.output_prefix + ".summary.unstacked.txt", "w"))
+        self.diversity_log = kwargs.get("diversity_log", open(self.output_prefix + ".summary.stacked.txt", "w"))
         self.tree_log = kwargs.get("tree_log", open(self.output_prefix + ".summary.trees", "w"))
         self.logger = kwargs.get("run_logger", RunLogger(log_path=self.output_prefix + "." + self.run_title + ".log"))
         self.regions = Region.matrix_from_file(kwargs.get("regions_file", self.default_regions()))
@@ -352,7 +347,6 @@ class Archipelago(object):
     def global_diversification(self):
         for lineage in self.tree.leaf_iter():
             u = self.rng.uniform(0, 1)
-            print u, len(self.tree.leaf_nodes())
             if u <= self.birth_rate:
                 child1 = lineage.new_child(edge_length=0)
                 child2 = lineage.new_child(edge_length=0)
@@ -413,8 +407,8 @@ class Archipelago(object):
             leaf.taxon = self.tree.taxon_set.new_taxon(label="T%03d" % (i+1))
             leaf.taxon.regions = leaf.regions
 
-    def write_incidence_log(self):
-        ilog = open(self.output_prefix + "." + self.run_title + ".incidences.txt", "w")
+    def write_species_in_rows_incidence_log(self):
+        ilog = open(self.output_prefix + "." + self.run_title + ".incidences.sprows.txt", "w")
         ilog.write(self.output_column_delimiter.join(["Species"] + [r.label for r in self.regions]))
         ilog.write("\n")
         for t in self.tree.taxon_set:
@@ -424,10 +418,27 @@ class Archipelago(object):
             ilog.write(self.output_column_delimiter.join(p))
             ilog.write("\n")
 
-    def write_stacked_diversity(self, column_headers=True):
+    def write_species_in_cols_incidence_log(self):
+        ilog = open(self.output_prefix + "." + self.run_title + ".incidences.spcols.txt", "w")
+        ilog.write(self.output_column_delimiter.join(["Regions"] + [t.label for t in self.tree.taxon_set]))
+        ilog.write("\n")
+        for region in self.regions:
+            ilog.write(region.label)
+            ilog.write(self.output_column_delimiter)
+            p = [("1" if region in t.regions else "0") for t in self.tree.taxon_set]
+            ilog.write(self.output_column_delimiter.join(p))
+            ilog.write("\n")
+
+    def write_taxon_characters(self):
+        d = dendropy.StandardCharacterMatrix()
+        sa = dendropy.StateAlphabet()
+        for i, region in self.regions:
+            sa.append(dendropy.StateAlphabetElement(symbol=symbol))
+
+    def write_diversity_log(self, column_headers=True):
         if column_headers:
-            self.diversity_stacked_log.write(self.output_column_delimiter.join(["Region", "Lineages", "Endemics"]))
-            self.diversity_stacked_log.write("\n")
+            self.diversity_log.write(self.output_column_delimiter.join(["Region", "Lineages", "Endemics"]))
+            self.diversity_log.write("\n")
         for region in self.regions:
             row = []
             row.append(region.label)
@@ -442,13 +453,13 @@ class Archipelago(object):
             num_lineages += found
             row.append(str(num_lineages))
             row.append(str(num_endemics))
-            self.diversity_stacked_log.write(self.output_column_delimiter.join(row))
-            self.diversity_stacked_log.write("\n")
+            self.diversity_log.write(self.output_column_delimiter.join(row))
+            self.diversity_log.write("\n")
 
     def report(self, column_headers=True):
-        self.write_incidence_log()
-        self.write_stacked_diversity(column_headers)
-#        self.diversity_unstacked_log
+        self.write_species_in_rows_incidence_log()
+        self.write_species_in_cols_incidence_log()
+        self.write_diversity_log(column_headers)
 #        self.tree_log
 
 def main():
@@ -540,8 +551,7 @@ def main():
                 max_gens=opts.max_gens,
                 run_title="R%03d" % (rep+1),
                 output_prefix=opts.output_prefix,
-                diversity_stacked_log=open(opts.output_prefix + ".summary.stacked.txt", "w"),
-                diversity_unstacked_log=open(opts.output_prefix + ".summary.unstacked.txt", "w"),
+                diversity_log=open(opts.output_prefix + ".diversity.txt", "w"),
                 tree_log=open(opts.output_prefix + ".summary.trees", "w"),
                 run_logger=logger,
                 rng=rng)
