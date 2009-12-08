@@ -23,7 +23,7 @@ class RunLogger(object):
         if not RunLogger._LOGGER_SET:
             self.name = kwargs.get("name", "RunLog")
             self._log = logging.getLogger(self.name)
-            self._log.setLevel(logging.INFO)
+            self._log.setLevel(logging.DEBUG)
             if kwargs.get("log_to_stderr", True):
                 ch1 = logging.StreamHandler()
                 stderr_logging_level = self.get_logging_level(kwargs.get("stderr_logging_level", logging.INFO))
@@ -168,6 +168,33 @@ class Region(object):
         return regions
     matrix_from_file = staticmethod(matrix_from_file)
 
+    def matrix_as_string(regions, separator="\t"):
+        probs = []
+        max_len = 0
+        for i, region1 in enumerate(regions):
+            probs.append([])
+            for j, region2 in enumerate(regions):
+                if region2 in region1.connections:
+                    probs[-1].append(str(region1.connections[region2]))
+                else:
+                    probs[-1].append('0.0')
+                w = max([len(s) for s in probs[-1]])
+                if w > max_len:
+                    max_len = w
+        max_len += 2
+        s = StringIO()
+        s.write(separator)
+        s.write(separator.join([r.label.ljust(max_len) for r in regions]))
+        s.write("\n")
+        for i, region1 in enumerate(regions):
+            s.write(region1.label)
+            s.write(separator)
+            s.write(separator.join([("%s" % p.ljust(max_len)) for p in probs[i]]))
+            if i != len(regions) - 1:
+                s.write('\n')
+        return s.getvalue()
+    matrix_as_string = staticmethod(matrix_as_string)
+
     def __init__(self, label=None, carrying_capacity=30, rng=None):
         self.label = label
         if rng is None:
@@ -194,11 +221,14 @@ class Region(object):
 
 class Archipelago(object):
 
+    LOCAL_DIVERSIFICATION = 0
+    GLOBAL_DIVERSIFICATION = 1
+    DIVERSIFICATION_NAMES = ["Local", "Global"]
+
     SYMPATRIC_RANGE_INHERITANCE = 0
     VICARIANT_RANGE_INHERITANCE = 1
     PARTITION_RANGE_INHERITANCE = 2
-    LOCAL_DIVERSIFICATION = 0
-    GLOBAL_DIVERSIFICATION = 1
+    RANGE_INHERITANCE_NAMES = ["Sympatric", "Vicariant", "Partition"]
 
     def __init__(self, *args, **kwargs):
         self.run_title = kwargs.get("run_title", "ArchipelagoRun")
@@ -211,7 +241,7 @@ class Archipelago(object):
         self.range_inheritance = kwargs.get("range_inheritance", \
                 Archipelago.VICARIANT_RANGE_INHERITANCE)
         self.max_gens = kwargs.get("max_gens", 10000)
-        self.max_lineages = kwargs.get("max_lineages", 30)
+        self.target_diversity = kwargs.get("target_diversity", 30)
         self.output_prefix = kwargs.get("output_prefix", "archipelago_run")
         self.incidence_log = kwargs.get("incidence_log", \
                 open(self.output_prefix + "." + self.run_title + ".incidences.txt", "w"))
@@ -223,6 +253,14 @@ class Archipelago(object):
         self.tree = None
         self.bootstrapped = False
         self.diversify = None
+
+        self.logger.info("Initalized simulation '%s'" % self.run_title)
+        self.logger.debug("Birth Rate = %s, Death Rate = %s, Target Diversity = %s, Max Gens = %s" % (self.birth_rate, self.death_rate, self.target_diversity, self.max_gens))
+        self.logger.debug("Diversification Mode = '%s', Range Inheritance = '%s'" \
+                % (Archipelago.DIVERSIFICATION_NAMES[self.diversification_mode], \
+                   Archipelago.RANGE_INHERITANCE_NAMES[self.range_inheritance]))
+        self.logger.debug("Regions: %s" % (", ".join([r.label for r in self.regions])))
+        self.logger.debug("Migration Probabilities:\n%s" % Region.matrix_as_string(self.regions))
 
     def default_regions(self):
         r = """
@@ -256,6 +294,7 @@ class Archipelago(object):
     def bootstrap(self, initial_region=None):
         if initial_region is None:
             initial_region = self.rng.choice(self.regions)
+        self.logger.debug("Seeding lineage in Region '%s'" % initial_region.label)
         self.tree = dendropy.Tree()
         self.tree.seed_node.regions = set([initial_region])
         self.tree.seed_node.edge.length = 1
@@ -313,18 +352,19 @@ class Archipelago(object):
         if not self.bootstrapped:
             self.bootstrap()
         try:
+            self.logger.debug("%s: Starting run" % self.run_title)
             ngen = 0
             leaf_nodes = self.tree.leaf_nodes()
-            while ngen < self.max_gens and len(leaf_nodes) < self.max_lineages:
+            while ngen < self.max_gens and len(leaf_nodes) < self.target_diversity:
                 self.migrate()
                 self.diversify()
                 leaf_nodes = self.tree.leaf_nodes()
                 for nd in leaf_nodes:
                     nd.edge.length += 1
                 ngen += 1
-        except KeyboardInterrupt:
-            self.logger.warning("%s: Keyboard interrupt: terminating" % self.run_title)
-            return False
+#        except KeyboardInterrupt:
+#            self.logger.warning("%s: Keyboard interrupt: terminating" % self.run_title)
+#            return False
         except TotalExtinctionException:
             self.logger.warning("%s: All lineages extinct: terminating" % self.run_title)
             return False
@@ -369,13 +409,21 @@ def main():
         metavar='RHO',
         help="probability of migration (default=%default)")
 
-    parser.add_option('-X', '--max-lineages',
+    parser.add_option('-T', '--target-diversity',
         action='store',
-        dest='max_lineages',
+        dest='target_diversity',
         type='int',
         default=30,
-        metavar='NUM-TAXA',
-        help="end each simulation replicate when this number of lineages are reached (default=%default)")
+        metavar='NUM-LINEAGES',
+        help="end each simulation replicate when this number of lineages are reached, and repeat if not reached before maximum number of generations (default=%default)")
+
+    parser.add_option('-X', '--max-gens',
+        action='store',
+        dest='max_gens',
+        type='int',
+        default=10000,
+        metavar='MAX-GENS',
+        help="terminate each replicate after this number of generations, even if target diversity not reached (default=%default)")
 
     parser.add_option('-n', '--num-reps',
         action='store',
@@ -397,7 +445,7 @@ def main():
         action='store',
         dest='output_prefix',
         type='string', # also 'float', 'string' etc.
-        default='archipelago_results',
+        default='archipelago_run',
         metavar='OUTPUT-FILE-PREFIX',
         help="prefix for output files (default='%default')")
 
@@ -411,15 +459,17 @@ def main():
                 birth_rate=opts.birth_rate,
                 death_rate=opts.death_rate,
                 migration_rate=opts.migration_rate,
-                max_lineages=opts.max_lineages,
+                target_diversity=opts.target_diversity,
+                max_gens=opts.max_gens,
                 run_title="R%03d" % (rep+1),
+                output_prefix=opts.output_prefix,
                 diversity_stacked_log=open(opts.output_prefix + ".summary.stacked.txt", "w"),
                 diversity_unstacked_log=open(opts.output_prefix + ".summary.unstacked.txt", "w"),
                 tree_log=open(opts.output_prefix + ".summary.trees", "w"),
                 run_logger=logger,
                 rng=rng)
         success = arch.run()
-        if arch.num_lineages < opts.max_lineages:
+        if arch.num_lineages < opts.target_diversity:
             logger.warning("Failed to reach target diversity: re-running replicate %d ('%s')" % (rep+1, arch.run_title))
         elif not success:
             logger.warning("Total extinction of all lineages: re-running replicate %d ('%s')" % (rep+1, arch.run_title))
