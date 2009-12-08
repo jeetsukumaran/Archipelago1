@@ -11,6 +11,7 @@ import logging
 import dendropy
 from dendropy import treemanip
 from dendropy.utility import probability
+from dendropy.interop import paup
 
 _LOGGING_LEVEL_ENVAR = "ARCHIPELAGO_LOGGING_LEVEL"
 _LOGGING_FORMAT_ENVAR = "ARCHIPELAGO_LOGGING_FORMAT"
@@ -299,6 +300,8 @@ class Archipelago(object):
         self.tree = dendropy.Tree()
         self.tree.seed_node.regions = set([initial_region])
         self.tree.seed_node.edge.length = 1
+        self.tree.label = "phylogeny"
+        self.tree.is_rooted = True
         self.bootstrapped = True
         if self.diversification_mode == Archipelago.LOCAL_DIVERSIFICATION:
             self.diversify = self.local_diversification
@@ -361,6 +364,7 @@ class Archipelago(object):
                     child2.regions = set([r for r in lineage.regions if r not in child1.regions])
                 else:
                     raise ValueError("Invalid value for range inheritance mode: %s" % self.range_inheritance)
+                del(lineage.regions)
             elif u > self.birth_rate and u <= (self.birth_rate + self.death_rate):
                 if lineage is self.tree.seed_node:
                     raise TotalExtinctionException()
@@ -429,11 +433,27 @@ class Archipelago(object):
             ilog.write(self.output_column_delimiter.join(p))
             ilog.write("\n")
 
-    def write_taxon_characters(self):
-        d = dendropy.StandardCharacterMatrix()
+    def write_nexus(self):
+        d = dendropy.StandardCharacterMatrix(taxon_set=self.tree.taxon_set)
         sa = dendropy.StateAlphabet()
-        for i, region in self.regions:
-            sa.append(dendropy.StateAlphabetElement(symbol=symbol))
+        sa.append(dendropy.StateAlphabetElement(symbol="0"))
+        sa.append(dendropy.StateAlphabetElement(symbol="1"))
+        col = dendropy.CharacterType(state_alphabet=sa, label="occurs")
+        d.state_alphabets = [sa]
+        d.default_state_alphabet = sa
+        for t in self.tree.taxon_set:
+            v = dendropy.CharacterDataVector(taxon=t)
+            for r in self.regions:
+                if r in t.regions:
+                    v.append(dendropy.CharacterDataCell(value=sa.state_for_symbol(symbol="1"), character_type=col))
+                else:
+                    v.append(dendropy.CharacterDataCell(value=sa.state_for_symbol(symbol="0"), character_type=col))
+            d[t] = v
+        area_tree = paup.estimate_tree(char_matrix=d, tree_est_criterion="parsimony")
+        area_tree.label = "areas"
+        trees = dendropy.TreeList([self.tree, area_tree], taxon_set=self.tree.taxon_set)
+        dataset = dendropy.DataSet(d, trees)
+        dataset.write_to_path(self.output_prefix + "." + self.run_title + ".nex", "nexus")
 
     def write_diversity_log(self, column_headers=True):
         if column_headers:
@@ -460,6 +480,7 @@ class Archipelago(object):
         self.write_species_in_rows_incidence_log()
         self.write_species_in_cols_incidence_log()
         self.write_diversity_log(column_headers)
+        self.write_nexus()
 #        self.tree_log
 
 def main():
