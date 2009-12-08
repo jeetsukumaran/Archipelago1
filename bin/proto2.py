@@ -2,6 +2,8 @@
 
 import random
 import sys
+import re
+from cStringIO import StringIO
 from optparse import OptionGroup
 from optparse import OptionParser
 import logging
@@ -117,6 +119,52 @@ class Region(object):
     An atomic biogeographical unit.
     """
 
+    def matrix_from_file(f):
+        if isinstance(f, str):
+            stream = open(f, "rU")
+        else:
+            stream = f
+        row_strings = [r.strip() for r in f.readlines() if r.strip()]
+        region_names = [r.strip() for r in re.split("[\t ]+", row_strings[0]) if r.strip()]
+        rows = [[c.strip() for c in re.split("[\t ]+", r) if c.strip()] for r in row_strings[1:]]
+        regions = []
+        region_connections = {}
+        for i, row in enumerate(rows):
+            if row[0] != region_names[i]:
+                raise ValueError("Region names must match in column order: expecting '%s' in in first column of row %d, but found '%s'" \
+                    % (region_names[i], i+1, row[0]))
+            region = Region(label=region_names[i])
+            regions.append(region)
+            region_connections[region] = []
+            for j, c in enumerate(row[1:]):
+                c = c.strip()
+                try:
+                    region_connections[region].append(float(c))
+                except ValueError:
+                    if c == '-':
+                        region_connections[region].append('-')
+                    else:
+                        raise ValueError("Invalid value for migration probability in row %d, column %d: '%s'" % (i+1, j+1, c))
+#            region_connections[region] = [float(c) for c in row[1:]]
+            if len(region_connections[region]) != len(region_names):
+                raise ValueError("Expecting %d columns in row %d, but found %d" % (len(region_names), i+1, len(region_connections[region])))
+            c = region_connections[region].count('-')
+            if c == 1:
+                region_connections[region][region_connections[region].index('-')] = 1.0 - sum([x for x in region_connections[region] if x != '-'])
+            elif c > 1:
+                raise ValueError("Multiple columns with '-' specified in row %d" % (i+1))
+            if abs(1.0 - sum(region_connections[region])) > 0.001:
+                raise ValueError("Probabilities for row %d do not sum to 1.0: %s" % (i+1, [str(p) for p in region_connections[region]]))
+        for i, region1 in enumerate(regions):
+            for j, region2 in enumerate(regions):
+                region1.add_connection(region2, region_connections[region1][j])
+#        for region1 in regions:
+#            print
+#            print region1.label
+#            print "%s" % ("   ".join([("%s: %s" % (r.label, region1.connections[r])) for r in regions]))
+        return regions
+    matrix_from_file = staticmethod(matrix_from_file)
+
     def __init__(self, label=None, carrying_capacity=30, rng=None):
         self.label = label
         if rng is None:
@@ -168,25 +216,22 @@ class Archipelago(object):
         self.diversity_unstacked_log = kwargs.get("diversity_unstacked_log", open(self.output_prefix + ".summary.unstacked.txt", "w"))
         self.tree_log = kwargs.get("tree_log", open(self.output_prefix + ".summary.trees", "w"))
         self.logger = kwargs.get("run_logger", RunLogger(log_path=self.output_prefix + "." + self.run_title + ".log"))
-        self.regions = []
-        self.create_regions()
+        self.regions = Region.matrix_from_file(kwargs.get("regions_file", self.default_regions()))
         self.tree = None
         self.bootstrapped = False
         self.diversify = None
 
-    def create_regions(self):
-        self.regions = []
-        for label in ["A", "B", "C", "D", "E"]:
-            self.regions.append(Region(label, rng=self.rng))
-        # A <-> B <-> C <-> D <-> E
-        self.regions[0].add_connection(self.regions[1], self.migration_rate)
-        self.regions[1].add_connection(self.regions[0], self.migration_rate)
-        self.regions[1].add_connection(self.regions[2], self.migration_rate)
-        self.regions[2].add_connection(self.regions[1], self.migration_rate)
-        self.regions[2].add_connection(self.regions[3], self.migration_rate)
-        self.regions[3].add_connection(self.regions[2], self.migration_rate)
-        self.regions[3].add_connection(self.regions[4], self.migration_rate)
-        self.regions[4].add_connection(self.regions[3], self.migration_rate)
+    def default_regions(self):
+        r = """
+            A           B           C           D           E
+
+        A   -           %(m)s       0.0         0.0         0.0
+        B   %(m)s       -           %(m)s       0.0         0.0
+        C   0.0         %(m)s       -           %(m)s       0.0
+        D   0.0         0.0         %(m)s       -           %(m)s
+        E   0.0         0.0         0.0         %(m)s       -
+        """ % {"m" : self.migration_rate}
+        return StringIO(r)
 
     def num_lineages_in_region(self, region):
         return sum([1 for nd in self.tree.leaf_iter() if region in nd.regions])
@@ -278,6 +323,13 @@ class Archipelago(object):
             return False
         self.logger.info("Completed run after %d generations, with %d lineages in system" % (ngen, len(leaf_nodes)))
         return True
+
+    def report(self, write_summary_headers=True):
+        pass
+#        self.incidence_log
+#        self.diversity_stacked_log
+#        self.diversity_unstacked_log
+#        self.tree_log
 
 def main():
     """
