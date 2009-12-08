@@ -522,7 +522,7 @@ def main():
     Main CLI handler.
     """
 
-    parser = OptionParser(add_help_option=True)
+    parser = OptionParser(add_help_option=True, usage="%prog [options] [<REGIONS MODEL>]")
 
     parser.add_option('-b', '--birth-rate',
         action='store',
