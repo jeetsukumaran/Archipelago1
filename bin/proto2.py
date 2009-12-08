@@ -353,7 +353,8 @@ class Archipelago(object):
         self.clean_tree()
 
     def global_diversification(self):
-        for lineage in self.tree.leaf_iter():
+        lineages = self.tree.leaf_iter()
+        for lineage in lineages:
             u = self.rng.uniform(0, 1)
             if u <= self.birth_rate:
                 child1 = lineage.new_child(edge_length=0)
@@ -389,7 +390,6 @@ class Archipelago(object):
                     (self.target_diversity == 0 or len(leaf_nodes) < self.target_diversity):
                 self.migrate()
                 self.diversify()
-                self.clean_tree()
                 leaf_nodes = self.tree.leaf_nodes()
                 for nd in leaf_nodes:
                     nd.edge.length += 1
@@ -411,6 +411,8 @@ class Archipelago(object):
                     raise TotalExtinctionException()
                 else:
                     treemanip.prune_subtree(self.tree, leaf)
+                    if len(self.tree.seed_node.child_nodes()) == 0:
+                        raise TotalExtinctionException()
 
     def finalize_tree(self):
         self.clean_tree()
