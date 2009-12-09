@@ -28,6 +28,11 @@
 %\date[Evolution 2009]{EVOLUTION 2009}
 %Presentation at the Joint Annual Meeting of the Society for the Study of Evolution (SSE), the Society of Systematic Biologists (SSB), and the American Society of Naturalists (ASN)
 
+\usepackage{array}
+\newcolumntype{V}{>{\centering\arraybackslash} m{.4\linewidth} }
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% VARIABLES
@@ -226,21 +231,20 @@
 	\frametitle{Geography and the Mid-Domain Effect: Results}
 	
 
+
 \begin{table}[htdp]
-\caption{default}
 \begin{center}
-\begin{tabular}{l|c|c|}
+\begin{tabular}{l|V|V}
 
 			& $\mu=0.0$ & $\mu=0.1$ \\
 \hline			
 ``Box''		& \includegraphics[scale=0.15]{results-lineages-box-d0.pdf}		  &  \includegraphics[scale=0.15]{results-lineages-box-d1.pdf}  	\\
 \hline
 ``Linear''	& \includegraphics[scale=0.15]{results-lineages-linear-d0.pdf}		  & \includegraphics[scale=0.15]{results-lineages-linear-d1.pdf} 		\\
-	
+\hline	
 
 \end{tabular}
 \end{center}
-\label{default}
 \end{table}%
 
 \end{frame}
