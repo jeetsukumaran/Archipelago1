@@ -1,0 +1,111 @@
+\documentclass[11pt,t]{beamer}
+\usetheme{Madrid}	
+\setbeamertemplate{blocks}[rounded][shadow=false] 
+\useinnertheme{circles} %% [circles], [rounded], [rectangles], [default]
+\setbeamertemplate{infolines}{}
+\setbeamertemplate{navigation symbols}{} 
+\setbeamertemplate{footline}[page number]{} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% other packages
+\usepackage{natbib}
+\newcommand{\newblock}{}
+\usepackage{color}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% TITLE META DATA
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\title[Phylogeographic Statistics Performance]{Evaluating the Performance of Phylogeographic Test Statistics using Complex Simulations}
+%%\subtitle[Evolution2009]{Evolution 2009}
+%\author[Sukumaran, Holder and Brown]{Jeet Sukumaran, Mark. T. Holder and Rafe M. Brown}
+%\institute[KU]{
+%  Department of Ecology and Evolutionary Biology\\
+%  University of Kansas\\
+%  Lawrence, KS\\[1ex]
+%  \texttt{jeet@ku.edu\\mtholder@ku.edu\\rafe@ku.edu}
+%}
+%\date[Evolution 2009]{EVOLUTION 2009}
+%Presentation at the Joint Annual Meeting of the Society for the Study of Evolution (SSE), the Society of Systematic Biologists (SSB), and the American Society of Naturalists (ASN)
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% VARIABLES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\highlighta}[1]{\textcolor{orange}{#1}}
+\newcommand{\highlightb}[1]{\textcolor{red}{#1}}
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% TITLE PAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\begin{frame}[plain]
+%  \titlepage
+%\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% TOC
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\section*{Outline} 
+%\begin{frame} 
+%\tableofcontents 
+%\end{frame} 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% MAIN PRESENTATION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \frametitle{Phylogeographic Analyses and Hypothesis Testing Methods}
+% \begin{block}{Definition} 
+%A \alert{set} consists of elements. 
+%\end{block} 
+
+\begin{frame}
+ \frametitle{The Simulation Model}
+ 
+ 	\begin{block}{The Birth-Death Process}	
+		\begin{itemize}
+			\item Probability of speciation, birth rate = $\lambda$
+			\item Probability of extinction, death rate = $\mu$
+		\end{itemize}					
+	\end{block}
+	
+	\begin{block}{The Geographical Template}
+		\begin{columns}
+			\begin{column}[c]{0.20 \textwidth}
+				\includegraphics[scale=0.3]{generic-geographical-template.pdf}
+			\end{column}
+			\begin{column}[T]{0.01 \textwidth}
+				{\LARGE  ${\Longrightarrow}$ }
+			\end{column}
+			\begin{column}[c]{0.40 \textwidth}	
+						
+			    \begin{tabular}{c|cccc}
+			          & A & B & C & D\\
+					\hline	             
+			        A & $P_{AA}$ & $P_{AB}$ & $P_{AC}$ & $P_{AD}$ \\
+			        B & $P_{BA}$ & $P_{BB}$ & $P_{BC}$ & $P_{BD}$ \\
+			        C & $P_{CA}$ & $P_{CB}$ & $P_{CC}$ & $P_{CD}$ \\
+			        D & $P_{DA}$ & $P_{DB}$ & $P_{DC}$ & $P_{DD}$ \\
+		        \end{tabular}
+			\end{column}	        
+		\end{columns}
+	\end{block}
+ 
+\end{frame} 
+
+
+
+\end{document}
+
+
+
+
+
+
