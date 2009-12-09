@@ -152,8 +152,26 @@
 \begin{frame}
 	\frametitle{Simulation Output}
 	\begin{itemize}
-		\item Incidence (presence/absence) matrix.
-		\item Phylogeny.
+		\item Incidence (presence/absence) matrix:\\
+			\begin{center}
+			{\footnotesize
+			    \begin{tabular}{c|cccc}
+			          & A & B & C & D\\
+					\hline	             
+			        $S_{1}$ & 0 & 0 & 1 & 1 \\
+			        $S_{2}$ & 1 & 0 & 0 & 1 \\
+			        $S_{3}$ & 0 & 1 & 1 & 0 \\
+			        .    & . & . & . & . \\
+			        .    & . & . & . & . \\
+			        .    & . & . & . & . \\			        
+			        $S_{T}$ & 1 & 0 & 1 & 1 \\
+		        \end{tabular}		
+			}
+			\end{center}
+		\item Phylogeny: \\
+			\begin{center}
+				\includegraphics[scale=0.3]{sample-phylogeny.pdf}
+			\end{center}				
 		\item Summary of total number of lineages and total number of endemic lineages in each region.
 		\item Classification tree of areas based on shared species.
 	\end{itemize}
