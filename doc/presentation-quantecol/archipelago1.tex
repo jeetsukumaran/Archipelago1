@@ -106,6 +106,38 @@
 	\end{itemize}
 \end{frame}
 
+\begin{frame}
+	\frametitle{Simulation Cycle}
+	\begin{enumerate}
+		\item Initialize with $\lambda$, $\mu$, region definitions and speciation mode.
+		
+		\item ``Seed'' system: introduce single lineage into a region.
+		
+		\item Set termination condition:
+			\begin{itemize}
+				\item Target diversity = $T$: Run until $T$ species.
+				\item Number of generations = $G$: Run until generation $G$.
+			\end{itemize}
+		
+		\item Repeat until $T$ species or $G$ generations, or all species extinct:
+			\begin{itemize}
+				\item Migration:			
+				\begin{itemize} 
+					\item For each species in each region, select a destination region for dispersal (include current region, i.e., no dispersal) according to dispersal probability.
+					\item Add species to destination region if not already present.
+				\end{itemize}
+			
+				\item Diversification:
+				\begin{itemize}	 
+					\item For each species in the system, draw a uniform random number, $u \sim U(0,1)$.					
+					\item If $u < \lambda$: split lineage.
+					\item If $u > \lambda$ and $u < (\lambda + \mu)$: remove lineage.
+				\end{itemize}	
+			\end{itemize}							
+	\end{enumerate}
+	
+\end{frame}
+
 
 
 \end{document}
