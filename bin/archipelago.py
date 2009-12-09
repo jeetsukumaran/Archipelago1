@@ -223,9 +223,9 @@ class Archipelago(object):
     DIVERSIFICATION_NAMES = ["Local", "Global"]
 
     SYMPATRIC_RANGE_INHERITANCE = 0
-    VICARIANT_RANGE_INHERITANCE = 1
+    ALLOPATRIC_RANGE_INHERITANCE = 1
     PARTITION_RANGE_INHERITANCE = 2
-    RANGE_INHERITANCE_NAMES = ["Sympatric", "Vicariant", "Partition"]
+    RANGE_INHERITANCE_NAMES = ["Sympatric", "Allopatric", "Partition"]
 
     def __init__(self, *args, **kwargs):
         self.run_title = kwargs.get("run_title", "ArchipelagoRun")
@@ -236,7 +236,7 @@ class Archipelago(object):
         self.diversification_mode = kwargs.get("diversification_mode", \
                 Archipelago.GLOBAL_DIVERSIFICATION)
         self.range_inheritance = kwargs.get("range_inheritance", \
-                Archipelago.VICARIANT_RANGE_INHERITANCE)
+                Archipelago.ALLOPATRIC_RANGE_INHERITANCE)
         self.max_gens = kwargs.get("max_gens", 10000)
         self.target_diversity = kwargs.get("target_diversity", 30)
         self.output_prefix = kwargs.get("output_prefix", "archipelago_run")
@@ -346,7 +346,7 @@ class Archipelago(object):
                     if self.range_inheritance == Archipelago.SYMPATRIC_RANGE_INHERITANCE:
                         child1.regions = set(lineage.regions)
                         child2.regions = set(lineage.regions)
-                    elif self.range_inheritance == Archipelago.VICARIANT_RANGE_INHERITANCE:
+                    elif self.range_inheritance == Archipelago.ALLOPATRIC_RANGE_INHERITANCE:
                         if len(lineage.regions) == 1:
                             child1.regions = set(lineage.regions)
                             child2.regions = set(lineage.regions)
@@ -377,7 +377,7 @@ class Archipelago(object):
                 if self.range_inheritance == Archipelago.SYMPATRIC_RANGE_INHERITANCE:
                     child1.regions = set(lineage.regions)
                     child2.regions = set(lineage.regions)
-                elif self.range_inheritance == Archipelago.VICARIANT_RANGE_INHERITANCE:
+                elif self.range_inheritance == Archipelago.ALLOPATRIC_RANGE_INHERITANCE:
                     if len(lineage.regions) == 1:
                         child1.regions = set(lineage.regions)
                         child2.regions = set(lineage.regions)
