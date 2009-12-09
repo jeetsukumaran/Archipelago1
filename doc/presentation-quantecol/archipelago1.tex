@@ -107,23 +107,34 @@
 \end{frame}
 
 \begin{frame}
-	\frametitle{Simulation Cycle}
+	\frametitle{Simulation Set Up}		
+		\begin{itemize}
+			\item Set model parameters:
+				\begin{itemize}
+					\item Birth (speciation) rate, $\lambda$.
+					\item Death (extinction) rate, $\mu$.
+					\item Geographic template.
+					\item Speciation mode.
+				\end{itemize}				
+		   \item Set termination condition:
+				\begin{itemize}
+					\item Target diversity: run until total number of species = $T$.
+					\item Number of generations: run until number of generations = $G$.
+				\end{itemize}						
+			\item Specify random number seed.							
+		\end{itemize}									
+\end{frame}
+
+
+\begin{frame}
+	\frametitle{Simulation Procedure}
 	\begin{enumerate}
-		\item Initialize with $\lambda$, $\mu$, region definitions and speciation mode.
-		
-		\item ``Seed'' system: introduce single lineage into a region.
-		
-		\item Set termination condition:
-			\begin{itemize}
-				\item Target diversity = $T$: Run until $T$ species.
-				\item Number of generations = $G$: Run until generation $G$.
-			\end{itemize}
-		
+		\item Initialize: introduce single lineage into a region.
 		\item Repeat until $T$ species or $G$ generations, or all species extinct:
 			\begin{itemize}
 				\item Migration:			
 				\begin{itemize} 
-					\item For each species in each region, select a destination region for dispersal (include current region, i.e., no dispersal) according to dispersal probability.
+					\item For each species in each region, select a destination region for dispersal (including current region, i.e., no dispersal) according to dispersal probability.
 					\item Add species to destination region if not already present.
 				\end{itemize}
 			
@@ -133,9 +144,19 @@
 					\item If $u < \lambda$: split lineage.
 					\item If $u > \lambda$ and $u < (\lambda + \mu)$: remove lineage.
 				\end{itemize}	
-			\end{itemize}							
+			\end{itemize}
+		\item Report results.					
 	\end{enumerate}
-	
+\end{frame}
+
+\begin{frame}
+	\frametitle{Simulation Output}
+	\begin{itemize}
+		\item Incidence (presence/absence) matrix.
+		\item Phylogeny.
+		\item Summary of total number of lineages and total number of endemic lineages in each region.
+		\item Classification tree of areas based on shared species.
+	\end{itemize}
 \end{frame}
 
 
