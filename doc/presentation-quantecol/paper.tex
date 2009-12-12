@@ -1,0 +1,53 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\title{Archipelago}
+\author{Jeet Sukumaran}
+%\date{}                                           % Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\section*{Introduction}
+Archipelago is a forward-time simulation of macro-evolutionary diversification processes in a spatially-explicit framework.
+The motivation for this simulator is to provide for null distributions of diversity, i.e., numbers of species or lineages found in different regions, under the model being simulated.
+
+\section*{The Simulation Model}
+
+\subsection*{The Diversification Process}
+The birth-death process has two parameters.
+The birth rate, $\lambda$, is the probability that each species in the system speciates, or splits into two daughter species.
+The death rate, $\mu$, is the probability that each species in the system goes extincts.
+A special case of the birth-death process is when the death rate, $\mu$, is 0, in which case we have a pure-birth process, which is also referred to as the \textit{Yule} model.
+
+In the pure birth process, the expected number of lineages, $E(n)$ at time $t$ is given by:
+\begin{align*}
+E(n) = e^{\lambda t},
+\end{align*}
+corresponding to population growth equations of the same form.
+
+With extinction, the expected number of lineages, $E(n)$ at time $t$ is:
+\begin{align*}
+E(n) = e^{(\lambda-\mu) t}.
+\end{align*}
+
+\subsection*{The Geographic Template}
+
+The spatial aspect of the simulation model is represented by the \textit{geographical template}, which the defines the fundamental atomic spatial units of the simulation, \textit{regions}, and the connectivity between these units, which determines the rate of dispersal of lineages from one region to another.
+
+
+
+
+
+%\subsection{}
+
+
+
+\end{document}  
