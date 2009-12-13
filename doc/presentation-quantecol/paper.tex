@@ -8,7 +8,8 @@
 \usepackage{amssymb}
 \usepackage{epstopdf}
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
-
+\usepackage{array}
+\newcolumntype{V}{>{\centering\arraybackslash} m{.4\linewidth} }
 \title{Archipelago}
 \author{Jeet Sukumaran}
 %\date{}                                           % Activate to display a given date or no date
@@ -120,9 +121,38 @@ The final output of the simulation consists of various kinds of summaries of the
 This output provides the minimal data required to calculate various indices of beta and community diversity as well as phylogenetic diversity statistics.
 Future versions of the program will provide the facility to calculate and report these statistics natively, allowing for better pipelining workflows.
 
+\section*{Application: Mid-Domain Effect}
+The mid-domain effect is an explanation for the observed latitudinal gradient in diversity, where tropical latitudes are seen to have higher numbers of species than temperate ones.
+The mid-domain effect has been justified analytically in terms of fitting a number of species with random range sizes into a finite-bounded space, resulting in the middle regions of the space accumulating more species than the marginal regions.
+Here I present the results of a study that demonstrates the mid-domain effect modeled purely in terms of random processes of dispersal and diversification under two different geographical geometries, without recourse to any specific pre-defined range size per species.
 
-%\subsection{}
+The two geographical geometries are ``box'' and ``linear''.
+In the ``box'' geometry, there is no distinct ``mid-domain'' as such: dispersal from any region to any other region is equal, and hence all regions are equidistant from each other in the Euclidean space induced by the dispersal probabilities:
 
+\begin{center}
+	\includegraphics[scale=0.3]{box-model.pdf}
+\end{center}
+
+In the ``linear'' geometry, the dispersal probabilities are given such that there are distinct ``satellite'' ($A$ and $D$) and ``mid-domain'' ($B$ and $C$) regions:
+
+\begin{center}
+	\includegraphics[scale=0.3]{linear-model.pdf}
+\end{center}
+
+A total of 100 replicates were run, with a birth rate, $\lambda=0.1$, and a death rate, $\mu=0.1$, and termination condition set to a target diversity of 30 species.
+The following plot shows the frequency distribution of the numbers of lineages in each region in order ($A$, $B$, $C$, and $D$) for the ``box'' configuration:
+
+\begin{center}
+	\includegraphics[scale=0.6]{results-lineages-box-d1.pdf}
+\end{center}
+
+While the following shows the frequency distribution of the numbers of lineages in each region in order ($A$, $B$, $C$, and $D$) for the ``linear'' configuration:
+
+\begin{center}
+	\includegraphics[scale=0.6]{results-lineages-linear-d1.pdf}
+\end{center}
+
+While there is no clear statistical distinction between the two sets of distributions, it can be seen that there is a clear trend toward higher diversity in the mid-regions (i.e., regions $B$ and $C$) in the linear configuration, whereas no such trend is evident in the box configuration.
 
 
 \end{document}  
