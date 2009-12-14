@@ -6,6 +6,7 @@
 %\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
 \usepackage{graphicx}
 \usepackage{amssymb}
+\usepackage{natbib}
 \usepackage{epstopdf}
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 \usepackage{array}
@@ -23,18 +24,18 @@ The motivation for this simulator is to provide for null distributions of divers
 \section*{The Simulation Model}
 
 \subsection*{The Diversification Process}
-The birth-death process has two parameters.
+The birth-death process has two parameters \citep{Mooers1997,aldous2001stochastic}.
 The birth rate, $\lambda$, is the probability that each species in the system speciates, or splits into two daughter species.
-The death rate, $\mu$, is the probability that each species in the system goes extincts.
-A special case of the birth-death process is when the death rate, $\mu$, is 0, in which case we have a pure-birth process, which is also referred to as the \textit{Yule} model.
+The death rate, $\mu$, is the probability that each species in the system goes extinct.
+A special case of the birth-death process is when the death rate, $\mu$, is 0, in which case we have a pure-birth process, which is also referred to as the \textit{Yule} model \citep{Mooers1997, Yule1924}.
 
-In the pure birth process, the expected number of lineages, $E(n)$ at time $t$ is given by:
+In the pure birth process, the expected number of lineages, $E(n)$ at time $t$ is given by \citep{ricklefs2007estimating}:
 \begin{align*}
 E(n) = e^{\lambda t},
 \end{align*}
 corresponding to population growth equations of the same form.
 
-With extinction, the expected number of lineages, $E(n)$ at time $t$ is:
+With extinction, the expected number of lineages, $E(n)$ at time $t$ is \citep{ricklefs2007estimating}:
 \begin{align*}
 E(n) = e^{(\lambda-\mu) t}.
 \end{align*}
@@ -122,8 +123,8 @@ This output provides the minimal data required to calculate various indices of b
 Future versions of the program will provide the facility to calculate and report these statistics natively, allowing for better pipelining workflows.
 
 \section*{Application: Mid-Domain Effect}
-The mid-domain effect is an explanation for the observed latitudinal gradient in diversity, where tropical latitudes are seen to have higher numbers of species than temperate ones.
-The mid-domain effect has been justified analytically in terms of fitting a number of species with random range sizes into a finite-bounded space, resulting in the middle regions of the space accumulating more species than the marginal regions.
+The mid-domain effect is an explanation for the observed latitudinal gradient in diversity, where tropical latitudes are seen to have higher numbers of species than temperate ones \citep{Colwell2004a, Colwella,Connolly2005a}
+The mid-domain effect has been justified analytically in terms of fitting a number of species with random range sizes into a finite-bounded space, resulting in the middle regions of the space accumulating more species than the marginal regions \citep{Colwell2004a}.
 Here I present the results of a study that demonstrates the mid-domain effect modeled purely in terms of random processes of dispersal and diversification under two different geographical geometries, without recourse to any specific pre-defined range size per species.
 
 The two geographical geometries are ``box'' and ``linear''.
@@ -155,14 +156,19 @@ While the following shows the frequency distribution of the numbers of lineages 
 While there is no clear statistical distinction between the two sets of distributions, it can be seen that there is a clear trend toward higher diversity in the mid-regions (i.e., regions $B$ and $C$) in the linear configuration, whereas no such trend is evident in the box configuration.
 
 These results are not particularly surprising given the model: the total flux into the marginal regions is exactly half that of the flux into the mid-domain regions, leading to an accumulation of higher total diversity.
-They do provide for an alternate justification of the mid-domain effect, however, in terms of random processes of diversification and dispersal.
+They do provide for an explanation of the mid-domain effect, however, in terms of random processes of diversification and dispersal (see also \citet{Connolly2005a}).
 
 \section*{Conclusions}
 
 By generating null distributions of diversity under the process of random (neutral) diversification and dispersal, and comparing these distributions using various summary statistics or indexes, such as the checkerboard score etc., to actual observed diversity, this simulator can be used to identify systems in which processes \textit{other} than random diversification and dispersal are operating.
 There is a large scope for studies of this kind, especially in island archipelagos that are only recently beginning to be studied using modern phylogenetic and ecological theory, such as the Philippine islands.
-The high diversity of the Philippine islands is unevenly distributed, with maximum diversity reached in different islands by different groups.
-As yet, there is no clear consensus on the process underlying this patter, or even if, indeed, there is any process apart from the historical contigency of stochastic colonization and radiation.
+The high diversity of the Philippine islands is unevenly distributed, with maximum diversity reached in different islands by different groups \citep{Diamond1983a,Heaney2005a,Heaney1968a,Steppan2003a,Tougard2001a,Wuster1990a}.
+As yet, there is no clear consensus on the process underlying this patter, or even if, indeed, there is any process apart from the historical contigency of stochastic colonization and radiation (Brown, pers. comm.).
 By carefully calibrating the simulator to replicate conditions in the Philippines (i.e., diversity of groups of different sizes, dispersal/connectivity between the islands, etc.), and usage of suitable summary statistics (that should be able to index diversity both in terms of its richness as well as its distribution), it should be possible to determine whether one need investigate evolutionary or ecological processes as an explanation for the patterns.
+
+In addition, it would be useful to revisit many of ecological species assembly debates in the light of phylogenetics, and understand how an explicit diversification model may alter or inform the null distributions and metrics developed in this context, e.g., \citet{Diamond1983a, Stone1990a, Stone1992a, Gotelli2002a, Gotelli2000a, Feeley2003a, Ulrich2004a}.
+
+\bibliographystyle{sysbio}
+\bibliography{refs}
 
 \end{document}  
