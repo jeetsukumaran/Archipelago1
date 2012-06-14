@@ -11,7 +11,7 @@ import logging
 
 import dendropy
 from dendropy import treemanip
-from dendropy.utility import probability
+from dendropy.mathlib import probability
 from dendropy.interop import paup
 
 _LOGGING_LEVEL_ENVAR = "ARCHIPELAGO_LOGGING_LEVEL"
@@ -211,7 +211,7 @@ class Region(object):
             probs.append(k)
         else:
             raise ValueError('Sum of probabilities of connections > 1')
-        return probability.lengthed_choice(dests, probs)
+        return probability.weighted_choice(dests, probs)
 
     def __str__(self):
         return "Region '%s'" % self.label
